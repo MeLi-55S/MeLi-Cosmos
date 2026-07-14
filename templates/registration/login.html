@@ -1,0 +1,43 @@
+{% extends "blog/base.html" %}
+
+{% block title %}登录 - Project MyCosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto pt-12">
+    <div class="bg-slate-950/60 border border-slate-900 rounded-2xl p-8 shadow-2xl">
+        <h2 class="text-xl font-bold text-slate-100 mb-6 font-mono text-center">🔐 登录</h2>
+
+        {% if form.errors %}
+        <div class="bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3 text-sm text-red-400 mb-6 font-mono">
+            用户名或密码错误，请重试。
+        </div>
+        {% endif %}
+
+        <form method="post" class="space-y-5">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ next }}">
+
+            <div>
+                <label for="id_username" class="block text-xs font-mono text-slate-400 mb-2">用户名</label>
+                <input type="text" name="username" id="id_username" autofocus required
+                       class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition">
+            </div>
+
+            <div>
+                <label for="id_password" class="block text-xs font-mono text-slate-400 mb-2">密码</label>
+                <input type="password" name="password" id="id_password" required
+                       class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition">
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm">
+                登入
+            </button>
+        </form>
+
+        <p class="text-center text-xs text-slate-600 mt-6 font-mono">
+            <a href="{% url 'index' %}" class="text-cyan-400 hover:text-cyan-300">返回首页</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

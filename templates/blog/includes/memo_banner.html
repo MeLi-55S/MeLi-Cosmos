@@ -1,0 +1,9 @@
+{% if latest_memo %}
+<div class="bg-slate-950/40 border border-slate-900 rounded-xl p-4 flex items-start space-x-3 backdrop-blur-md">
+    <span class="text-xl">🛰️</span>
+    <div class="text-xs md:text-sm text-slate-400 font-mono">
+        <span class="text-cyan-500 font-bold">当前状态：</span> {{ latest_memo.content }}
+        <span class="text-slate-600 block mt-1">{{ latest_memo.created_time|date:"Y年n月j日 H:i" }}</span>
+    </div>
+</div>
+{% endif %}

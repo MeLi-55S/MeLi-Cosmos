@@ -1,0 +1,53 @@
+<div class="space-y-6">
+    {# Profile card #}
+    <div class="bg-slate-950/60 border border-slate-900 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+        <div class="flex flex-col items-center text-center">
+            <div class="relative mb-4">
+                <div class="absolute inset-0 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full blur opacity-40 animate-pulse"></div>
+                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Debris"
+                     alt="头像"
+                     class="w-20 h-20 bg-slate-900 rounded-full border-2 border-slate-800 relative z-10 p-1">
+            </div>
+
+            <h3 class="text-lg font-bold text-slate-100 font-mono">{{ profile.name }}</h3>
+            <p class="text-xs text-cyan-400 font-mono mb-4">{{ profile.title }}</p>
+
+            <p class="text-xs text-slate-400 leading-relaxed font-light mb-6">{{ profile.bio }}</p>
+
+            <div class="w-full space-y-3 border-t border-slate-900 pt-4 text-left font-mono text-xs">
+                {% for stat in profile.stats %}
+                <div class="flex justify-between">
+                    <span class="text-slate-500">{{ stat.icon }} {{ stat.label }}：</span>
+                    <span class="{% if stat.color == 'green' %}text-green-400{% elif stat.color == 'amber' %}text-amber-400{% else %}text-slate-300{% endif %}">
+                        {{ stat.value }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# Quick Memo Publish — logged in users only #}
+    {% if user.is_authenticated %}
+    <div class="bg-slate-950/60 border border-slate-900 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
+        <h4 class="text-xs font-mono text-cyan-400 mb-3">💬 碎碎念</h4>
+        <form method="post" action="{% url 'memo_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.path }}">
+            <textarea name="content" rows="2"
+                      class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-xs focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition resize-none"
+                      placeholder="此刻的想法……"></textarea>
+            <div class="flex items-center justify-between mt-2">
+                <label class="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
+                    <input type="checkbox" name="is_public" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-cyan-500">
+                    公开
+                </label>
+                <button type="submit"
+                        class="px-3 py-1 bg-cyan-500/20 border border-cyan-500/40 rounded-lg text-xs font-mono text-cyan-400 hover:bg-cyan-500/30 transition">
+                    发送
+                </button>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+</div>

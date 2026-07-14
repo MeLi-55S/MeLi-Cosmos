@@ -1,0 +1,20 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Django
+db.sqlite3
+staticfiles/
+media/
+
+# 用户自定义
+explanations/
+.claude/
+.vscode/

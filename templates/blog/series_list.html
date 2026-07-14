@@ -1,0 +1,42 @@
+{% extends "blog/base.html" %}
+
+{% block title %}系列 - Project MyCosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-2xl font-bold text-slate-100 font-mono">📚 文章系列</h1>
+        {% if user.is_authenticated %}
+        <a href="{% url 'series_create' %}"
+           class="px-4 py-2 bg-purple-500/20 border border-purple-500/40 text-purple-400 rounded-xl hover:bg-purple-500/30 transition font-mono text-sm">
+            + 新建系列
+        </a>
+        {% endif %}
+    </div>
+
+    {% if series_list %}
+    <div class="space-y-4">
+        {% for s in series_list %}
+        <a href="{% url 'post_by_series' s.slug %}"
+           class="block bg-slate-950/60 border border-slate-900 rounded-2xl p-6 hover:border-purple-500/40 transition group">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-100 group-hover:text-purple-400 transition">{{ s.name }}</h2>
+                    {% if s.description %}
+                    <p class="text-sm text-slate-400 mt-2">{{ s.description }}</p>
+                    {% endif %}
+                </div>
+                <span class="text-xs font-mono text-slate-500 bg-slate-900 px-3 py-1 rounded-full">
+                    {{ s.post_set.count }} 篇
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-slate-950/60 border border-slate-900 rounded-2xl p-12 text-center">
+        <p class="text-slate-500 font-mono text-sm">📚 暂无系列，文章还在路上……</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

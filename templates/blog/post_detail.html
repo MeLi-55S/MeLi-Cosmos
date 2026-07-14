@@ -1,0 +1,157 @@
+{% extends "blog/base.html" %}
+
+{% block title %}{{ post.title }} - Project MyCosmos{% endblock %}
+
+{% block meta_description %}{{ post.excerpt|default:post.title }}{% endblock %}
+{% block og_title %}{{ post.title }}{% endblock %}
+{% block og_description %}{{ post.excerpt|default:post.title }}{% endblock %}
+{% block og_type %}article{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+    {# 返回导航 #}
+    <a href="{% url 'index' %}" class="mb-6 inline-flex items-center space-x-2 text-sm font-mono text-slate-500 hover:text-cyan-400 transition cursor-pointer">
+        <span>&larr;</span> <span>返回首页</span>
+    </a>
+
+    <article class="bg-slate-950/60 border border-slate-900 rounded-2xl shadow-2xl overflow-hidden">
+
+        {# 封面图片 #}
+        {% if post.cover %}
+        <img src="{{ post.cover }}" alt="{{ post.title }}" class="w-full max-h-64 md:max-h-96 object-cover">
+        {% endif %}
+
+        <div class="p-6 md:p-10">
+
+        {# 文章头部 #}
+        <header class="mb-8 pb-6 border-b border-slate-900">
+            {% if post.series %}
+            <div class="text-xs md:text-sm font-mono text-purple-400 mb-2 tracking-wider font-semibold">
+                <a href="{% url 'post_by_series' series_slug %}" class="hover:text-purple-300 transition">
+                    系列：{{ series_name }}
+                </a>
+                <span class="text-slate-600">（第 {{ series_index }} 篇 / 共 {{ series_total }} 篇）</span>
+            </div>
+            {% endif %}
+            {% if post.category %}
+            <div class="text-xs md:text-sm font-mono text-cyan-400 mb-3 tracking-wider font-semibold">
+                {{ post.category.name|upper }}
+            </div>
+            {% endif %}
+            <h1 class="text-2xl md:text-4xl font-bold text-slate-100 leading-tight mb-4">
+                {{ post.title }}
+            </h1>
+            <div class="flex flex-wrap gap-4 text-xs text-slate-500 font-mono">
+                <span>📅 发布于 {{ post.created_time|date:"Y年n月j日" }}</span>
+                <span>⏱️ 阅读时间 {{ read_time }} 分钟</span>
+                <span>👁️ 浏览 {{ post.views }} 次</span>
+                <span>🔑 UUID: {{ post.unique_id|truncatechars:24 }}</span>
+            </div>
+        </header>
+
+        {# 系列导航（上一篇/下一篇） #}
+        {% if series_prev or series_next %}
+        <div class="flex justify-between items-center gap-4 mb-8 bg-slate-950/40 border border-slate-900 rounded-xl px-5 py-4 not-prose">
+            {% if series_prev %}
+            <a href="{% url 'post_detail' series_prev.slug %}"
+               class="text-xs font-mono text-slate-400 hover:text-cyan-400 transition flex-1">
+                <span class="block text-slate-600">← 上一篇</span>
+                <span class="text-slate-300">{{ series_prev.title|truncatechars:30 }}</span>
+            </a>
+            {% else %}
+            <div class="flex-1"></div>
+            {% endif %}
+            {% if series_next %}
+            <a href="{% url 'post_detail' series_next.slug %}"
+               class="text-xs font-mono text-slate-400 hover:text-cyan-400 transition text-right flex-1">
+                <span class="block text-slate-600">下一篇 →</span>
+                <span class="text-slate-300">{{ series_next.title|truncatechars:30 }}</span>
+            </a>
+            {% else %}
+            <div class="flex-1"></div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# 文章正文 - 服务端渲染 Markdown #}
+        <div class="md-content max-w-none text-slate-300 space-y-6 leading-relaxed font-light text-sm md:text-base">
+
+            {# TOC - 可折叠目录 #}
+            {% if post.toc %}
+            <details class="bg-slate-950/40 border border-slate-900 rounded-xl p-5 mb-6 not-prose">
+                <summary class="text-sm font-mono text-cyan-400 cursor-pointer select-none">📑 目录</summary>
+                <div class="mt-4 text-sm leading-relaxed toc-content">
+                    {{ post.toc|safe }}
+                </div>
+            </details>
+            <style>
+                .toc-content ul { list-style: none; padding-left: 0; }
+                .toc-content li { padding: 0.15rem 0; }
+                .toc-content a { color: #94a3b8; text-decoration: none; }
+                .toc-content a:hover { color: #22d3ee; }
+                .toc-content ul ul { padding-left: 1.25rem; }
+            </style>
+            {% endif %}
+
+            {{ post.body_html|safe }}
+        </div>
+
+        {# 标签页脚 #}
+        {% if post.tags.all %}
+        <div class="mt-10 pt-6 border-t border-slate-900">
+            <div class="flex flex-wrap gap-2">
+                {% for tag in post.tags.all %}
+                <a href="{% url 'post_by_tag' tag.slug %}"
+                   class="px-3 py-1 bg-slate-900 text-xs font-mono text-slate-400 rounded-full hover:bg-slate-800 hover:text-cyan-400 transition">
+                    #{{ tag.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {# 作者操作 #}
+        {% if user.is_authenticated and user == post.author %}
+        <div class="mt-8 pt-6 border-t border-slate-900 flex gap-4 items-center">
+            {% if post.status == 'draft' %}
+            <form method="post" action="{% url 'post_publish' unique_id=post.unique_id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-xs font-mono text-green-400 hover:text-green-300 transition bg-transparent border-none cursor-pointer">
+                    🚀 发布
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'post_edit' unique_id=post.unique_id %}"
+               class="text-xs font-mono text-cyan-400 hover:text-cyan-300 transition">
+                ✏️ 编辑
+            </a>
+            <a href="{% url 'post_delete' unique_id=post.unique_id %}"
+               class="text-xs font-mono text-red-400 hover:text-red-300 transition">
+                🗑️ 删除
+            </a>
+        </div>
+        {% endif %}
+
+        </div>{# /.p-6 md:p-10 #}
+    </article>
+
+    {# 相关文章 #}
+    {% if related_posts %}
+    <section class="mt-10">
+        <h3 class="text-sm font-mono text-slate-500 mb-4">相关文章</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for rp in related_posts %}
+            <a href="{% url 'post_detail' rp.slug %}" class="bg-slate-950/60 border border-slate-900 rounded-xl p-4 hover:border-cyan-500/40 transition group">
+                <div class="text-xs font-mono text-cyan-400 mb-1">{{ rp.category.name|default:"" }}</div>
+                <h4 class="text-sm font-semibold text-slate-200 group-hover:text-cyan-400 transition line-clamp-2">{{ rp.title }}</h4>
+                <p class="text-xs text-slate-500 mt-2">{{ rp.created_time|date:"Y年n月j日" }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}

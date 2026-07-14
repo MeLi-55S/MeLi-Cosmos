@@ -1,0 +1,171 @@
+{% extends "blog/base.html" %}
+
+{% block title %}{% if form.instance.pk %}编辑：{{ form.instance.title }}{% else %}新建文章{% endif %} - Project MyCosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-100 mb-8 font-mono">
+        {% if form.instance.pk %}✏️ 编辑文章{% else %}✨ 新建文章{% endif %}
+    </h1>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <div>
+            <label for="{{ form.title.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">标题</label>
+            {{ form.title }}
+            {% if form.title.errors %}
+            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.title.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <label for="{{ form.body.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">
+                正文 <span class="text-slate-600">（Markdown）</span>
+            </label>
+            {{ form.body }}
+            {% if form.body.errors %}
+            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.body.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <label for="{{ form.excerpt.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">摘要（留空则自动生成）</label>
+            {{ form.excerpt }}
+            {% if form.excerpt.errors %}
+            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.excerpt.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label for="{{ form.category.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">分类</label>
+                {{ form.category }}
+                {% if form.category.errors %}
+                <p class="text-xs text-red-400 mt-1 font-mono">{{ form.category.errors.0 }}</p>
+                {% endif %}
+            </div>
+            <div>
+                <label for="{{ form.status.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">状态</label>
+                {{ form.status }}
+                {% if form.status.errors %}
+                <p class="text-xs text-red-400 mt-1 font-mono">{{ form.status.errors.0 }}</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div>
+            <label for="{{ form.series.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">系列</label>
+            {{ form.series }}
+        </div>
+
+        <div>
+            <label for="{{ form.series_order.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">系列序号</label>
+            {{ form.series_order }}
+        </div>
+
+        <div>
+            <label class="block text-xs font-mono text-slate-400 mb-2">标签</label>
+            {# Tag pill container #}
+            <div id="tag-pills" class="flex flex-wrap gap-1.5 mb-2 min-h-[1.5rem]"></div>
+            {# Visible input for typing #}
+            <input type="text" id="tag-input"
+                   class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                   placeholder="输入标签，空格确认……"
+                   list="tag-datalist" autocomplete="off">
+            {# Hidden input stores actual form value #}
+            <input type="hidden" name="tag_names" id="tag-names-hidden" value="{{ form.tag_names.value|default:'' }}">
+            <p class="text-xs text-slate-600 mt-1 font-mono">输入标签名后按空格确认，点击 × 删除</p>
+            {% if form.tag_names.errors %}
+            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.tag_names.errors.0 }}</p>
+            {% endif %}
+            {# Tag autocomplete datalist #}
+            <datalist id="tag-datalist">
+                {% for tag_name in existing_tag_names %}
+                <option value="{{ tag_name }}">
+                {% endfor %}
+            </datalist>
+        </div>
+
+        <script>
+        (function() {
+            var input = document.getElementById('tag-input');
+            var hidden = document.getElementById('tag-names-hidden');
+            var pills = document.getElementById('tag-pills');
+            var datalist = document.getElementById('tag-datalist');
+
+            // Load existing tags
+            var tags = hidden.value ? hidden.value.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
+
+            function sync() {
+                hidden.value = tags.join(', ');
+                // Render pills
+                pills.innerHTML = tags.map(function(t, i) {
+                    return '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono text-cyan-300 rounded-full">' +
+                        t +
+                        '<button type="button" data-idx="' + i + '" class="tag-remove text-slate-600 hover:text-red-400 transition leading-none text-sm">&times;</button>' +
+                        '</span>';
+                }).join('');
+                // Bind remove handlers
+                pills.querySelectorAll('.tag-remove').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var idx = parseInt(this.getAttribute('data-idx'));
+                        tags.splice(idx, 1);
+                        sync();
+                        input.focus();
+                    });
+                });
+            }
+
+            input.addEventListener('keydown', function(e) {
+                if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    var val = input.value.trim();
+                    if (val && tags.indexOf(val) === -1) {
+                        tags.push(val);
+                        sync();
+                    }
+                    input.value = '';
+                }
+                if (e.key === 'Backspace' && input.value === '' && tags.length > 0) {
+                    tags.pop();
+                    sync();
+                }
+            });
+
+            // Allow comma too (paste support)
+            input.addEventListener('change', function() {
+                var val = input.value.trim();
+                if (val) {
+                    var parts = val.split(/[ ,]+/).filter(Boolean);
+                    parts.forEach(function(p) {
+                        if (tags.indexOf(p) === -1) tags.push(p);
+                    });
+                    sync();
+                    input.value = '';
+                }
+            });
+
+            sync();
+        })();
+        </script>
+
+        {% if form.instance.pk %}
+        <div class="text-xs font-mono text-slate-600">
+            UUID: {{ form.instance.unique_id }}
+        </div>
+        {% endif %}
+
+        <div class="flex items-center gap-4 pt-4 border-t border-slate-900">
+            <button type="submit"
+                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm">
+                {% if form.instance.pk %}保存修改{% else %}发布文章{% endif %}
+            </button>
+            <a href="{% if form.instance.pk %}{% url 'post_detail' form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
+               class="px-6 py-3 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-slate-300 transition font-mono text-sm">
+                取消
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

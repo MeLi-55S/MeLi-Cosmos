@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}🌌 Project MyCosmos{% endblock %}</title>
+
+    {# SEO Meta #}
+    <meta name="description" content="{% block meta_description %}极简主义个人博客，记录后端开发、游戏与运维的点滴。{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}Project MyCosmos{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}极简主义个人博客，记录后端开发、游戏与运维的点滴。{% endblock %}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    <meta property="og:url" content="{{ request.build_absolute_uri }}">
+    <meta name="twitter:card" content="summary">
+
+    {# RSS Auto-discovery #}
+    <link rel="alternate" type="application/rss+xml" title="Project MyCosmos RSS 订阅" href="{% url 'rss_feed' %}">
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        code, pre { font-family: 'JetBrains Mono', monospace; }
+
+        /* Pygments Dark Theme - Monokai-inspired code highlighting */
+        .codehilite { background: #030712; border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; margin: 1rem 0; position: relative; }
+        .codehilite pre { margin: 0; background: transparent; padding-right: 3rem; }
+        .codehilite .hll { background-color: #272822; }
+        .codehilite .c { color: #6c7a89; font-style: italic; }
+        .codehilite .err { color: #f92672; }
+        .codehilite .k { color: #66d9ef; }
+        .codehilite .o { color: #f92672; }
+        .codehilite .cm { color: #6c7a89; font-style: italic; }
+        .codehilite .cp { color: #6c7a89; font-style: italic; }
+        .codehilite .c1 { color: #6c7a89; font-style: italic; }
+        .codehilite .cs { color: #6c7a89; font-style: italic; }
+        .codehilite .gd { color: #f92672; }
+        .codehilite .ge { font-style: italic; }
+        .codehilite .gr { color: #f92672; }
+        .codehilite .gh { color: #e6db74; }
+        .codehilite .gi { color: #a6e22e; }
+        .codehilite .go { color: #88846f; }
+        .codehilite .gp { color: #88846f; }
+        .codehilite .gs { font-weight: bold; }
+        .codehilite .gu { color: #ae81ff; }
+        .codehilite .gt { color: #f92672; }
+        .codehilite .kc { color: #66d9ef; }
+        .codehilite .kd { color: #66d9ef; }
+        .codehilite .kn { color: #f92672; }
+        .codehilite .kp { color: #66d9ef; }
+        .codehilite .kr { color: #66d9ef; }
+        .codehilite .kt { color: #66d9ef; }
+        .codehilite .m { color: #ae81ff; }
+        .codehilite .s { color: #e6db74; }
+        .codehilite .na { color: #a6e22e; }
+        .codehilite .nb { color: #f8f8f2; }
+        .codehilite .nc { color: #a6e22e; }
+        .codehilite .no { color: #66d9ef; }
+        .codehilite .nd { color: #a6e22e; }
+        .codehilite .ni { color: #f8f8f2; }
+        .codehilite .ne { color: #a6e22e; }
+        .codehilite .nf { color: #a6e22e; }
+        .codehilite .nl { color: #f8f8f2; }
+        .codehilite .nn { color: #f8f8f2; }
+        .codehilite .nx { color: #a6e22e; }
+        .codehilite .py { color: #f8f8f2; }
+        .codehilite .nt { color: #f92672; }
+        .codehilite .nv { color: #f8f8f2; }
+        .codehilite .ow { color: #f92672; }
+        .codehilite .w { color: #f8f8f2; }
+        .codehilite .mf { color: #ae81ff; }
+        .codehilite .mh { color: #ae81ff; }
+        .codehilite .mi { color: #ae81ff; }
+        .codehilite .mo { color: #ae81ff; }
+        .codehilite .sb { color: #e6db74; }
+        .codehilite .sc { color: #e6db74; }
+        .codehilite .sd { color: #e6db74; }
+        .codehilite .s2 { color: #e6db74; }
+        .codehilite .se { color: #ae81ff; }
+        .codehilite .sh { color: #e6db74; }
+        .codehilite .si { color: #e6db74; }
+        .codehilite .sx { color: #e6db74; }
+        .codehilite .sr { color: #e6db74; }
+        .codehilite .s1 { color: #e6db74; }
+        .codehilite .ss { color: #e6db74; }
+        .codehilite .bp { color: #f8f8f2; }
+        .codehilite .vc { color: #f8f8f2; }
+        .codehilite .vg { color: #f8f8f2; }
+        .codehilite .vi { color: #f8f8f2; }
+        .codehilite .il { color: #ae81ff; }
+
+        /* Markdown content typography — replaces Tailwind Typography plugin */
+        .md-content h1 { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; margin: 2rem 0 1rem; line-height: 1.3; }
+        .md-content h2 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin: 1.75rem 0 0.75rem; line-height: 1.35; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+        .md-content h3 { font-size: 1.15rem; font-weight: 600; color: #cbd5e1; margin: 1.5rem 0 0.5rem; line-height: 1.4; }
+        .md-content h4, .md-content h5, .md-content h6 { font-size: 1rem; font-weight: 600; color: #94a3b8; margin: 1.25rem 0 0.5rem; }
+        .md-content p { margin: 0.75rem 0; line-height: 1.8; }
+        .md-content ul, .md-content ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+        .md-content li { margin: 0.25rem 0; line-height: 1.7; }
+        .md-content blockquote { border-left: 3px solid #06b6d4; padding: 0.5rem 1rem; margin: 1rem 0; background: #0f172a; border-radius: 0 0.5rem 0.5rem 0; color: #94a3b8; font-style: italic; }
+        .md-content a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
+        .md-content a:hover { color: #67e8f9; }
+        .md-content img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
+        .md-content hr { border: 0; border-top: 1px solid #1e293b; margin: 2rem 0; }
+        .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
+        .md-content th { background: #1e293b; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #e2e8f0; border: 1px solid #334155; }
+        .md-content td { padding: 0.5rem 0.75rem; border: 1px solid #1e293b; }
+        .md-content code { background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; color: #f1f5f9; }
+        .md-content strong { color: #e2e8f0; font-weight: 600; }
+        .md-content em { color: #cbd5e1; }
+
+        /* Code copy button */
+        .codehilite:hover .copy-btn { opacity: 1; }
+        .copy-btn {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            padding: 0.25rem 0.5rem;
+            background: #1e293b; border: 1px solid #334155; border-radius: 0.375rem;
+            color: #94a3b8; font-size: 0.75rem; cursor: pointer;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .copy-btn:hover { background: #334155; color: #e2e8f0; }
+        .copy-btn.copied { color: #4ade80; border-color: #4ade80; }
+
+        /* Back to top button */
+        #back-to-top {
+            position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 40;
+            width: 2.5rem; height: 2.5rem;
+            background: #1e293b; border: 1px solid #334155; border-radius: 9999px;
+            color: #94a3b8; font-size: 1.25rem; cursor: pointer;
+            opacity: 0; transform: translateY(1rem);
+            transition: opacity 0.3s, transform 0.3s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #back-to-top.visible { opacity: 1; transform: translateY(0); }
+        #back-to-top:hover { background: #334155; color: #22d3ee; border-color: #22d3ee; }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-[#050a14] text-slate-300 antialiased min-h-screen flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
+
+    {% include "blog/includes/nav.html" %}
+
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 md:px-8 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% include "blog/includes/footer.html" %}
+
+    {# 返回顶部按钮 #}
+    <button id="back-to-top" aria-label="返回顶部" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+    {# 代码复制 + 返回顶部行为 #}
+    <script>
+    // 为所有代码块注入复制按钮
+    document.querySelectorAll('.codehilite').forEach(function(block) {
+        var btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = '复制';
+        btn.addEventListener('click', function() {
+            var code = block.querySelector('pre').innerText;
+            navigator.clipboard.writeText(code).then(function() {
+                btn.textContent = '已复制！';
+                btn.classList.add('copied');
+                setTimeout(function() {
+                    btn.textContent = '复制';
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        });
+        block.appendChild(btn);
+    });
+
+    // 返回顶部按钮可见性
+    var btt = document.getElementById('back-to-top');
+    window.addEventListener('scroll', function() {
+        if (window.scrollY > 400) {
+            btt.classList.add('visible');
+        } else {
+            btt.classList.remove('visible');
+        }
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+[project]
+name = "my-cosmos"
+version = "2.0.0"
+description = "Project MyCosmos v2.0 - A minimalist Django personal blog with Zettelkasten philosophy"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "django>=6.0.6",
+    "markdown>=3.7",
+    "pygments>=2.19",
+]
