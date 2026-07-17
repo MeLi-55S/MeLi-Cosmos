@@ -18,7 +18,7 @@ class PostSitemap(Sitemap):
         return obj.modified_time
 
     def location(self, obj):
-        return reverse("post_detail", kwargs={"slug": obj.slug})
+        return reverse("post_detail", kwargs={"username": obj.author.username, "slug": obj.slug})
 
 
 class StaticViewSitemap(Sitemap):

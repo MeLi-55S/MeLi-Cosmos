@@ -1,5 +1,5 @@
 """
-ASGI config for Project MyCosmos v2.0.
+ASGI config for MeLi Cosmos v2.0.
 """
 import os
 from django.core.asgi import get_asgi_application

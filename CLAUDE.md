@@ -14,7 +14,7 @@ uv run python manage.py test       # Run tests
 
 ## Architecture
 
-This is a single-app Django personal blog (Project MyCosmos v2.0). The Django project is `my_cosmos/` and the sole app is `blog/`.
+This is a single-app Django personal blog (MeLi Cosmos v2.0). The Django project is `my_cosmos/` and the sole app is `blog/`.
 
 **Models** (`blog/models.py`): `Category`, `Tag`, `Post`, `Memo`. `Post.unique_id` is a UUID field that serves as the ingestion anchor for syncing with local Obsidian notes — always use `unique_id` (not auto-increment PK) for idempotent operations, especially in sync/API endpoints. `Post.status` has three states: `draft`, `published`, `private`. `Memo` is a microblogging/short-update component; only the latest public memo is shown on the index.
 

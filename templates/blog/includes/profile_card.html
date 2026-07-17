@@ -1,53 +1,115 @@
 <div class="space-y-6">
-    {# Profile card #}
-    <div class="bg-slate-950/60 border border-slate-900 rounded-2xl p-6 shadow-2xl backdrop-blur-md">
+    {# ========== 主卡片 ========== #}
+    {% if user.is_authenticated %}
+    {# 登录用户：个人资料卡 #}
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-6 shadow-lg dark:shadow-2xl backdrop-blur-md">
         <div class="flex flex-col items-center text-center">
             <div class="relative mb-4">
                 <div class="absolute inset-0 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full blur opacity-40 animate-pulse"></div>
-                <img src="https://api.dicebear.com/7.x/bottts/svg?seed=Debris"
+                <img src="{{ profile.avatar_url }}"
                      alt="头像"
-                     class="w-20 h-20 bg-slate-900 rounded-full border-2 border-slate-800 relative z-10 p-1">
+                     class="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-full border-2 border-slate-200 dark:border-slate-800 relative z-10 object-cover">
             </div>
 
-            <h3 class="text-lg font-bold text-slate-100 font-mono">{{ profile.name }}</h3>
-            <p class="text-xs text-cyan-400 font-mono mb-4">{{ profile.title }}</p>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">{{ profile.name }}</h3>
+            {% if profile.title %}
+            <p class="text-xs text-cyan-600 dark:text-cyan-400 font-mono mb-4">{{ profile.title }}</p>
+            {% endif %}
 
-            <p class="text-xs text-slate-400 leading-relaxed font-light mb-6">{{ profile.bio }}</p>
+            <p class="text-xs leading-relaxed font-light mb-6 {% if profile.bio %}text-slate-500 dark:text-slate-400{% else %}text-slate-400 dark:text-slate-600 italic{% endif %}">
+                {% if profile.bio %}{{ profile.bio }}{% else %}这个人很懒，还没有填写个人简介……{% endif %}
+            </p>
 
-            <div class="w-full space-y-3 border-t border-slate-900 pt-4 text-left font-mono text-xs">
-                {% for stat in profile.stats %}
-                <div class="flex justify-between">
-                    <span class="text-slate-500">{{ stat.icon }} {{ stat.label }}：</span>
-                    <span class="{% if stat.color == 'green' %}text-green-400{% elif stat.color == 'amber' %}text-amber-400{% else %}text-slate-300{% endif %}">
-                        {{ stat.value }}
-                    </span>
-                </div>
-                {% endfor %}
+            <div class="w-full space-y-3 border-t border-slate-200 dark:border-slate-900 pt-4 text-left font-mono text-xs">
+                <a href="{% url 'profile_edit' %}" class="block text-center text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">
+                    ✏️ 编辑资料
+                </a>
+                {% if profile.website %}
+                <a href="{{ profile.website }}" target="_blank" rel="noopener" class="flex justify-between hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                    <span>🌐 网站</span>
+                    <span class="text-slate-400 dark:text-slate-500 truncate max-w-32">{{ profile.website|truncatechars:20 }}</span>
+                </a>
+                {% endif %}
+                {% if profile.github %}
+                <a href="{{ profile.github }}" target="_blank" rel="noopener" class="flex justify-between hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                    <span>🐙 GitHub</span>
+                    <span class="text-slate-400 dark:text-slate-500 truncate max-w-32">{{ profile.github|truncatechars:20 }}</span>
+                </a>
+                {% endif %}
+                {% if profile.mastodon %}
+                <a href="{{ profile.mastodon }}" target="_blank" rel="noopener" class="flex justify-between hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                    <span>🐘 Mastodon</span>
+                    <span class="text-slate-400 dark:text-slate-500 truncate max-w-32">{{ profile.mastodon|truncatechars:20 }}</span>
+                </a>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    {# Quick Memo Publish — logged in users only #}
-    {% if user.is_authenticated %}
-    <div class="bg-slate-950/60 border border-slate-900 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
-        <h4 class="text-xs font-mono text-cyan-400 mb-3">💬 碎碎念</h4>
+    {# 登录用户专用：快速发布碎碎念 #}
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-5 shadow-lg dark:shadow-2xl backdrop-blur-md">
+        <h4 class="text-xs font-mono text-cyan-600 dark:text-cyan-400 mb-3">💬 碎碎念</h4>
         <form method="post" action="{% url 'memo_create' %}">
             {% csrf_token %}
             <input type="hidden" name="next" value="{{ request.path }}">
             <textarea name="content" rows="2"
-                      class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 text-xs focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition resize-none"
+                      class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-slate-100 text-xs focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition resize-none"
                       placeholder="此刻的想法……"></textarea>
             <div class="flex items-center justify-between mt-2">
-                <label class="flex items-center gap-1 text-xs text-slate-600 cursor-pointer">
-                    <input type="checkbox" name="is_public" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-cyan-500">
+                <label class="flex items-center gap-1 text-xs text-slate-400 dark:text-slate-600 cursor-pointer">
+                    <input type="checkbox" name="is_public" checked class="rounded bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-cyan-600 dark:text-cyan-500 focus:ring-cyan-600 dark:focus:ring-cyan-500">
                     公开
                 </label>
                 <button type="submit"
-                        class="px-3 py-1 bg-cyan-500/20 border border-cyan-500/40 rounded-lg text-xs font-mono text-cyan-400 hover:bg-cyan-500/30 transition">
+                        class="px-3 py-1 bg-cyan-100 dark:bg-cyan-500/20 border border-cyan-300 dark:border-cyan-500/40 rounded-lg text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:bg-cyan-200 dark:hover:bg-cyan-500/30 transition min-h-[44px]">
                     发送
                 </button>
             </div>
         </form>
+    </div>
+
+    {% else %}
+    {# 匿名用户：平台欢迎卡 #}
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-6 shadow-lg dark:shadow-2xl backdrop-blur-md">
+        <div class="flex flex-col items-center text-center">
+            <div class="text-4xl mb-3">🌌</div>
+            <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">MeLi Cosmos</h3>
+            <p class="text-xs text-cyan-600 dark:text-cyan-400 font-mono mb-4">多用户博客平台</p>
+            <p class="text-xs leading-relaxed font-light mb-6 {% if profile.bio %}text-slate-500 dark:text-slate-400{% else %}text-slate-400 dark:text-slate-600 italic{% endif %}">
+                {% if profile.bio %}{{ profile.bio }}{% else %}这个人很懒，还没有填写个人简介……{% endif %}
+            </p>
+            <a href="{% url 'login' %}"
+               class="block w-full py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm text-center shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20">
+                登录
+            </a>
+            <a href="{% url 'register_entry' %}"
+               class="block w-full py-2.5 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-300 dark:border-cyan-500/30 text-cyan-600 dark:text-cyan-400 rounded-xl hover:bg-cyan-200 dark:hover:bg-cyan-500/20 transition font-mono text-sm text-center mt-2">
+                使用邀请码注册
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {# ========== 活跃作者（所有用户可见） ========== #}
+    {% if active_authors %}
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-5 shadow-lg dark:shadow-2xl backdrop-blur-md">
+        <h4 class="text-xs font-mono text-slate-500 dark:text-slate-400 mb-3">✍️ 活跃作者</h4>
+        <div class="space-y-3">
+            {% for author in active_authors %}
+            <a href="{% url 'user_space' username=author.username %}"
+               class="flex items-center gap-2 group">
+                <img src="{% if author.profile.avatar %}{{ author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ author.username }}{% endif %}"
+                     class="w-6 h-6 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover"
+                     alt="{{ author.username }}" width="24" height="24">
+                <div class="min-w-0">
+                    <span class="text-xs text-slate-700 dark:text-slate-300 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition block">
+                        {{ author.profile.display_name|default:author.username }}
+                    </span>
+                    <span class="text-xs text-slate-400 dark:text-slate-600">{{ author.post_count }} 篇文章</span>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
     </div>
     {% endif %}
 </div>

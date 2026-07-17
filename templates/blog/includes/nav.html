@@ -1,41 +1,116 @@
-<nav class="bg-[#050a14]/60 backdrop-blur-xl border-b border-slate-900 sticky top-0 z-50 transition-all duration-300">
+{% load static %}
+<nav class="bg-slate-50/60 dark:bg-[#050a14]/60 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900 sticky top-0 z-50 transition-all duration-300">
     <div class="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-        <a href="{% url 'index' %}" class="text-lg md:text-xl font-bold bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent hover:opacity-80 transition font-mono cursor-pointer">
-            🌌 Project MyCosmos
+        <a href="{% url 'landing' %}" class="flex items-center hover:opacity-80 transition cursor-pointer">
+            <img src="{% static 'default-monochrome.svg' %}" alt="MeLi Cosmos" class="h-7 dark:hidden">
+            <img src="{% static 'default-monochrome-white.svg' %}" alt="MeLi Cosmos" class="h-7 hidden dark:block">
         </a>
 
-        <div class="flex items-center space-x-3 md:space-x-5 text-xs md:text-sm font-mono text-slate-400">
-
-            {# Mobile search toggle #}
-            <button onclick="document.getElementById('search-box').classList.toggle('hidden')"
-                    class="md:hidden text-slate-400 hover:text-cyan-400 transition text-lg" title="搜索">🔍</button>
+        {# Desktop nav links #}
+        <div class="hidden lg:flex items-center space-x-3 md:space-x-5 text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400">
 
             {# Search form #}
-            <form id="search-box" method="get" action="{% url 'search' %}" class="hidden md:flex absolute md:static top-16 left-0 w-full md:w-auto bg-[#050a14] md:bg-transparent p-3 md:p-0 border-b border-slate-900 md:border-0 items-center">
+            <form id="search-box" method="get" action="{% url 'search' %}" class="flex items-center">
                 <input type="text" name="q" placeholder="搜索……"
-                       class="w-full md:w-28 lg:w-36 bg-slate-900 border border-slate-800 rounded-full px-3 py-1 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-cyan-500/50 transition">
+                       class="w-28 lg:w-36 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-full px-3 py-1 text-xs text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-cyan-600/50 dark:focus:border-cyan-500/50 transition">
             </form>
 
-            <a href="{% url 'index' %}" class="hover:text-cyan-400 transition">文章</a>
-            <a href="{% url 'archives' %}" class="hover:text-cyan-400 transition hidden sm:inline">归档</a>
-            <a href="{% url 'series_list' %}" class="hover:text-purple-400 transition hidden sm:inline">系列</a>
-            <a href="{% url 'memo_list' %}" class="hover:text-cyan-400 transition inline-flex items-center gap-1">
-                状态{% if latest_memo %} <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>{% endif %}
+            <a href="{% url 'index' %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">文章</a>
+            <a href="{% url 'archives' %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">归档</a>
+            <a href="{% url 'series_list' %}" class="hover:text-purple-600 dark:hover:text-purple-400 transition">系列</a>
+            <a href="{% url 'memo_list' %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition inline-flex items-center gap-1">
+                碎碎念{% if latest_memos %} <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>{% endif %}
             </a>
-            <a href="{% url 'about' %}" class="hover:text-cyan-400 transition hidden sm:inline">关于</a>
+            <a href="{% url 'about' %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">关于</a>
 
-            {# RSS Feed link #}
-            <a href="{% url 'rss_feed' %}" class="hover:text-amber-400 transition hidden md:inline" title="RSS 订阅">RSS</a>
+            {# Theme toggle #}
+            <button id="theme-toggle"
+                    class="hover:text-cyan-600 dark:hover:text-cyan-400 transition text-base min-h-[44px] min-w-[44px] flex items-center justify-center bg-transparent border-none cursor-pointer"
+                    aria-label="切换主题" title="切换主题">
+                <svg id="theme-icon-sun" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="3"/>
+                    <line x1="12" y1="21" x2="12" y2="23"/>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                    <line x1="1" y1="12" x2="3" y2="12"/>
+                    <line x1="21" y1="12" x2="23" y2="12"/>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                </svg>
+                <svg id="theme-icon-moon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                </svg>
+                <svg id="theme-icon-monitor" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+            </button>
 
             {% if user.is_authenticated %}
-            <a href="{% url 'post_create' %}" class="text-cyan-400 hover:text-cyan-300 transition" title="写文章">✏️</a>
+            <a href="{% url 'user_space' username=user.username %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition" title="我的空间">我的空间</a>
+            <a href="{% url 'post_create' %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition" title="写文章">写文章</a>
+            <a href="{% url 'invite' %}" class="hover:text-purple-600 dark:hover:text-purple-400 transition" title="邀请码">邀请码</a>
             <form method="post" action="{% url 'logout' %}" class="inline">
                 {% csrf_token %}
-                <button type="submit" class="hover:text-red-400 transition font-mono text-xs md:text-sm text-slate-400 bg-transparent border-none cursor-pointer">退出</button>
+                <button type="submit" class="hover:text-red-600 dark:hover:text-red-400 transition font-mono text-xs md:text-sm text-slate-500 dark:text-slate-400 bg-transparent border-none cursor-pointer min-h-[44px]">退出</button>
             </form>
             {% else %}
-            <a href="{% url 'login' %}" class="hover:text-cyan-400 transition">登录</a>
+            <a href="{% url 'login' %}{% if request.path != '/' %}?next={{ request.path|urlencode }}{% endif %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">登录</a>
+            <a href="{% url 'register_entry' %}{% if request.path != '/' %}?next={{ request.path|urlencode }}{% endif %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">注册</a>
             {% endif %}
         </div>
+
+        {# Mobile hamburger + compact actions #}
+        <div class="flex items-center gap-3 lg:hidden">
+            {% if user.is_authenticated %}
+            <a href="{% url 'post_create' %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition text-lg font-mono" title="写文章">写</a>
+            {% else %}
+            <a href="{% url 'register_entry' %}{% if request.path != '/' %}?next={{ request.path|urlencode }}{% endif %}" class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">注册</a>
+            <a href="{% url 'login' %}{% if request.path != '/' %}?next={{ request.path|urlencode }}{% endif %}" class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">登录</a>
+            {% endif %}
+            <button id="menu-toggle" class="text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition text-base min-h-[44px] min-w-[44px] flex items-center justify-center font-mono"
+                    aria-label="菜单" aria-expanded="false">
+                菜单
+            </button>
+        </div>
+    </div>
+
+    {# Mobile dropdown menu #}
+    <div id="mobile-menu" class="hidden lg:hidden absolute top-16 left-0 w-full bg-slate-50/95 dark:bg-[#050a14]/95 backdrop-blur-xl border-b border-slate-200 dark:border-slate-900 p-4 space-y-3">
+        <form method="get" action="{% url 'search' %}" class="mb-3">
+            <input type="text" name="q" placeholder="搜索……"
+                   class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-full px-3 py-2 text-sm text-slate-700 dark:text-slate-300 placeholder-slate-400 dark:placeholder-slate-600 focus:outline-none focus:border-cyan-600/50 dark:focus:border-cyan-500/50 transition">
+        </form>
+        <a href="{% url 'index' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">文章</a>
+        <a href="{% url 'archives' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">归档</a>
+        <a href="{% url 'series_list' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition">系列</a>
+        <a href="{% url 'memo_list' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">碎碎念</a>
+        <a href="{% url 'about' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">关于</a>
+
+        {# Mobile theme toggle #}
+        <button id="theme-toggle-mobile"
+                class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition w-full text-left bg-transparent border-none cursor-pointer p-0"
+                aria-label="切换主题">
+            <span id="theme-label-mobile">主题：系统</span>
+        </button>
+
+        {% if user.is_authenticated %}
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-900">
+            <a href="{% url 'user_space' username=user.username %}" class="block text-sm font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">我的空间</a>
+            <a href="{% url 'invite' %}" class="block text-sm font-mono text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition mt-2">邀请码</a>
+            <a href="{% url 'profile_edit' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition mt-2">编辑资料</a>
+            <form method="post" action="{% url 'logout' %}" class="mt-2">
+                {% csrf_token %}
+                <button type="submit" class="block w-full text-left text-sm font-mono text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition bg-transparent border-none cursor-pointer p-0">退出</button>
+            </form>
+        </div>
+        {% else %}
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-900">
+            <a href="{% url 'login' %}{% if request.path != '/' %}?next={{ request.path|urlencode }}{% endif %}" class="block text-sm font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">登录</a>
+            <a href="{% url 'register_entry' %}{% if request.path != '/' %}?next={{ request.path|urlencode }}{% endif %}" class="block text-sm font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition mt-2">使用邀请码注册</a>
+        </div>
+        {% endif %}
     </div>
 </nav>

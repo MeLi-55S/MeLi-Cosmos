@@ -1,0 +1,68 @@
+{% extends "blog/base.html" %}
+
+{% block title %}编辑资料 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">编辑个人资料</h1>
+
+    {# Avatar section #}
+    <div class="flex items-center gap-4 mb-8 p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-2xl">
+        <img src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ user.username }}{% endif %}"
+             alt="头像" class="w-16 h-16 rounded-full object-cover border-2 border-slate-200 dark:border-slate-800">
+        <div>
+            <p class="text-sm font-mono text-slate-700 dark:text-slate-300">头像</p>
+            <a href="{% url 'avatar_edit' %}" class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">
+                修改头像 →
+            </a>
+        </div>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+        <div>
+            <label for="{{ form.display_name.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">显示名称</label>
+            {{ form.display_name }}
+            {% if form.display_name.errors %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.display_name.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div>
+            <label for="{{ form.title.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">头衔</label>
+            {{ form.title }}
+        </div>
+
+        <div>
+            <label for="{{ form.bio.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">个人简介</label>
+            {{ form.bio }}
+        </div>
+
+        <div>
+            <label for="{{ form.website.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">个人网站</label>
+            {{ form.website }}
+        </div>
+
+        <div>
+            <label for="{{ form.github.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">GitHub</label>
+            {{ form.github }}
+        </div>
+
+        <div>
+            <label for="{{ form.mastodon.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">Mastodon</label>
+            {{ form.mastodon }}
+        </div>
+
+        <div class="flex items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-900">
+            <button type="submit"
+                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
+                保存
+            </button>
+            <a href="{% url 'user_space' username=user.username %}"
+               class="px-4 py-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">
+                取消
+            </a>
+        </div>
+    </form>
+</div>
+{% endblock %}

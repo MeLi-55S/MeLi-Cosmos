@@ -1,18 +1,18 @@
 """
-Seed management command for Project MyCosmos v2.0.
+Seed management command for MeLi Cosmos v2.0.
 Populates the database with sample data matching example.html.
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from django.utils import timezone
-from blog.models import Category, Tag, Post, Memo
+from blog.models import Category, Tag, Post, Memo, UserProfile
 
 
 class Command(BaseCommand):
-    help = "Seed the database with initial sample data for MyCosmos blog."
+    help = "Seed the database with initial sample data for MeLi Cosmos blog."
 
     def handle(self, *args, **options):
-        self.stdout.write("🌌 Seeding Project MyCosmos database...")
+        self.stdout.write("🌌 Seeding MeLi Cosmos database...")
 
         # ── User ──────────────────────────────────────────────────
         user, created = User.objects.get_or_create(
@@ -28,11 +28,26 @@ class Command(BaseCommand):
             user.save()
         self.stdout.write(f"  ✅ User: {user.username}")
 
+        # ── UserProfile ──────────────────────────────────────────
+        profile, _ = UserProfile.objects.get_or_create(
+            user=user,
+            defaults={
+                "display_name": "Debris",
+                "title": "全栈开发者 & 数字园丁",
+                "bio": "Python / Django 开发者，明日方舟刀客塔，Obsidian 重度用户。在这个数字花园里记录技术思考与生活碎碎念。",
+            },
+        )
+        self.stdout.write(f"  ✅ UserProfile: {profile.display_name}")
+
         # ── Categories ────────────────────────────────────────────
-        cat_backend, _ = Category.objects.get_or_create(name="后端开发")
-        cat_game, _ = Category.objects.get_or_create(name="游戏人生")
-        Category.objects.get_or_create(name="系统运维")
-        Category.objects.get_or_create(name="数字花园")
+        cat_backend, _ = Category.objects.get_or_create(
+            name="后端开发", defaults={"author": user}
+        )
+        cat_game, _ = Category.objects.get_or_create(
+            name="游戏人生", defaults={"author": user}
+        )
+        Category.objects.get_or_create(name="系统运维", defaults={"author": user})
+        Category.objects.get_or_create(name="数字花园", defaults={"author": user})
         self.stdout.write(f"  ✅ Categories created")
 
         # ── Tags ──────────────────────────────────────────────────
@@ -42,7 +57,7 @@ class Command(BaseCommand):
         ]
         tag_objs = {}
         for name in tags_data:
-            tag, _ = Tag.objects.get_or_create(name=name)
+            tag, _ = Tag.objects.get_or_create(name=name, defaults={"author": user})
             tag_objs[name] = tag
         self.stdout.write(f"  ✅ Tags created")
 
@@ -135,6 +150,7 @@ def calculate_efficiency(manufacturing_data):
             Memo.objects.create(
                 content="今天把 Nginx 限流和防火墙策略盘明白了。等下把本地 Obsidian 的 API 接口对通，准备大干一场！",
                 is_public=True,
+                author=user,
             )
             self.stdout.write(f"  ✅ Memo created")
 

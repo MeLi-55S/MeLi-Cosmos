@@ -1,5 +1,5 @@
 """
-Django settings for Project MyCosmos v2.0.
+Django settings for MeLi Cosmos v2.0.
 Minimalist, production-ready configuration.
 """
 import os
@@ -115,7 +115,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 # Auth
 LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = "/posts/"
 LOGOUT_REDIRECT_URL = "/"
 
 # Honor X-Forwarded-For header when behind trusted proxy (Nginx)

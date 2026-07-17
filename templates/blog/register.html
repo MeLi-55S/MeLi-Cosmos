@@ -1,0 +1,68 @@
+{% extends "blog/base.html" %}
+
+{% block title %}注册 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto pt-12">
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-8 shadow-lg dark:shadow-2xl">
+        <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2 font-mono">🌌 加入 MeLi Cosmos</h1>
+        <p class="text-xs text-slate-400 dark:text-slate-500 mb-6">
+            邀请人：<span class="text-cyan-600 dark:text-cyan-400">@{{ inviter.username }}</span>
+        </p>
+
+        {% if messages %}
+        {% for message in messages %}
+        <div class="mb-4 p-3 rounded-xl text-xs font-mono bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.GET.next|default:'' }}">
+            <div>
+                <label class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">用户名</label>
+                <input type="text" name="username" required
+                       class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition"
+                       placeholder="选择你的用户名">
+                {% if form.username.errors %}
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ form.username.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">密码</label>
+                <input type="password" name="password1" required
+                       class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition"
+                       placeholder="输入密码">
+                {% if form.password1.errors %}
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ form.password1.errors.0 }}</p>
+                {% endif %}
+                {% if form.password1.help_text %}
+                <p class="text-xs text-slate-400 dark:text-slate-600 mt-1">{{ form.password1.help_text|safe }}</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">确认密码</label>
+                <input type="password" name="password2" required
+                       class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition"
+                       placeholder="再次输入密码">
+                {% if form.password2.errors %}
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1">{{ form.password2.errors.0 }}</p>
+                {% endif %}
+            </div>
+
+            <button type="submit"
+                    class="w-full py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
+                注册
+            </button>
+        </form>
+
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-6 text-center">
+            已有账号？<a href="{% url 'login' %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300">登录</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

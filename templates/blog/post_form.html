@@ -1,83 +1,117 @@
 {% extends "blog/base.html" %}
 
-{% block title %}{% if form.instance.pk %}编辑：{{ form.instance.title }}{% else %}新建文章{% endif %} - Project MyCosmos{% endblock %}
+{% block title %}{% if form.instance.pk %}编辑：{{ form.instance.title }}{% else %}新建文章{% endif %} - MeLi Cosmos{% endblock %}
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-100 mb-8 font-mono">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">
         {% if form.instance.pk %}✏️ 编辑文章{% else %}✨ 新建文章{% endif %}
     </h1>
 
     <form method="post" class="space-y-6">
         {% csrf_token %}
 
+        {% if form.non_field_errors %}
+        <div class="p-3 rounded-xl text-xs font-mono bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400">
+            {{ form.non_field_errors.0 }}
+        </div>
+        {% endif %}
+
         <div>
-            <label for="{{ form.title.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">标题</label>
+            <label for="{{ form.title.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">标题</label>
             {{ form.title }}
             {% if form.title.errors %}
-            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.title.errors.0 }}</p>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.title.errors.0 }}</p>
             {% endif %}
         </div>
 
         <div>
-            <label for="{{ form.body.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">
-                正文 <span class="text-slate-600">（Markdown）</span>
+            <label for="{{ form.body.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">
+                正文 <span class="text-slate-400 dark:text-slate-600">（Markdown）</span>
             </label>
+            {# Image upload toolbar #}
+            <div class="flex items-center gap-3 mb-2">
+                <button type="button" id="image-upload-btn"
+                        class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 px-2.5 py-1 rounded-lg transition bg-transparent border border-dashed border-cyan-400/50 dark:border-cyan-500/30 cursor-pointer inline-flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                    </svg>
+                    图片
+                </button>
+                <span class="text-xs text-slate-400 dark:text-slate-500">或 Ctrl+V / 拖拽图片到编辑区</span>
+                <input type="file" id="image-file-input" accept="image/*" class="hidden">
+                <span id="image-upload-status" class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hidden"></span>
+            </div>
             {{ form.body }}
             {% if form.body.errors %}
-            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.body.errors.0 }}</p>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.body.errors.0 }}</p>
             {% endif %}
         </div>
 
         <div>
-            <label for="{{ form.excerpt.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">摘要（留空则自动生成）</label>
+            <label for="{{ form.excerpt.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">摘要（留空则自动生成）</label>
             {{ form.excerpt }}
             {% if form.excerpt.errors %}
-            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.excerpt.errors.0 }}</p>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.excerpt.errors.0 }}</p>
             {% endif %}
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-                <label for="{{ form.category.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">分类</label>
-                {{ form.category }}
+                <label for="{{ form.category.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">分类</label>
+                <div class="flex gap-2">
+                    {{ form.category }}
+                    <button type="button" id="new-category-btn" class="flex-shrink-0 w-11 h-11 flex items-center justify-center text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 rounded-lg transition bg-transparent border border-slate-300 dark:border-slate-700 cursor-pointer" title="新建分类">+</button>
+                </div>
+                <div id="new-category-form" class="hidden mt-2 flex gap-2">
+                    <input type="text" id="new-category-name" placeholder="新分类名称"
+                           class="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition">
+                    <button type="button" id="new-category-confirm" class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
+                    <button type="button" id="new-category-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
+                </div>
                 {% if form.category.errors %}
-                <p class="text-xs text-red-400 mt-1 font-mono">{{ form.category.errors.0 }}</p>
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.category.errors.0 }}</p>
                 {% endif %}
             </div>
             <div>
-                <label for="{{ form.status.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">状态</label>
+                <label for="{{ form.status.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">状态</label>
                 {{ form.status }}
                 {% if form.status.errors %}
-                <p class="text-xs text-red-400 mt-1 font-mono">{{ form.status.errors.0 }}</p>
+                <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.status.errors.0 }}</p>
                 {% endif %}
             </div>
         </div>
 
         <div>
-            <label for="{{ form.series.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">系列</label>
-            {{ form.series }}
+            <label for="{{ form.series.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">系列</label>
+            <div class="flex gap-2">
+                {{ form.series }}
+                <button type="button" id="new-series-btn" class="flex-shrink-0 w-11 h-11 flex items-center justify-center text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 rounded-lg transition bg-transparent border border-slate-300 dark:border-slate-700 cursor-pointer" title="新建系列">+</button>
+            </div>
+            <div id="new-series-form" class="hidden mt-2 space-y-2">
+                <input type="text" id="new-series-name" placeholder="新系列名称"
+                       class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition">
+                <div class="flex gap-2">
+                    <button type="button" id="new-series-confirm" class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
+                    <button type="button" id="new-series-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
+                </div>
+            </div>
         </div>
 
         <div>
-            <label for="{{ form.series_order.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">系列序号</label>
-            {{ form.series_order }}
-        </div>
-
-        <div>
-            <label class="block text-xs font-mono text-slate-400 mb-2">标签</label>
+            <label class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">标签</label>
             {# Tag pill container #}
             <div id="tag-pills" class="flex flex-wrap gap-1.5 mb-2 min-h-[1.5rem]"></div>
             {# Visible input for typing #}
             <input type="text" id="tag-input"
-                   class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-slate-100 text-sm focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition"
+                   class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition"
                    placeholder="输入标签，空格确认……"
                    list="tag-datalist" autocomplete="off">
             {# Hidden input stores actual form value #}
             <input type="hidden" name="tag_names" id="tag-names-hidden" value="{{ form.tag_names.value|default:'' }}">
-            <p class="text-xs text-slate-600 mt-1 font-mono">输入标签名后按空格确认，点击 × 删除</p>
+            <p class="text-xs text-slate-400 dark:text-slate-600 mt-1 font-mono">输入标签名后按空格确认，点击 × 删除</p>
             {% if form.tag_names.errors %}
-            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.tag_names.errors.0 }}</p>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.tag_names.errors.0 }}</p>
             {% endif %}
             {# Tag autocomplete datalist #}
             <datalist id="tag-datalist">
@@ -101,9 +135,9 @@
                 hidden.value = tags.join(', ');
                 // Render pills
                 pills.innerHTML = tags.map(function(t, i) {
-                    return '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-500/10 border border-cyan-500/20 text-xs font-mono text-cyan-300 rounded-full">' +
+                    return '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20 text-xs font-mono text-cyan-700 dark:text-cyan-300 rounded-full">' +
                         t +
-                        '<button type="button" data-idx="' + i + '" class="tag-remove text-slate-600 hover:text-red-400 transition leading-none text-sm">&times;</button>' +
+                        '<button type="button" data-idx="' + i + '" class="tag-remove text-slate-400 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 transition leading-none text-sm">&times;</button>' +
                         '</span>';
                 }).join('');
                 // Bind remove handlers
@@ -150,19 +184,149 @@
         })();
         </script>
 
+        <script>
+        // Inline category & series creation helpers
+        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        function setupInlineCreate(btnId, formId, confirmId, cancelId, nameInputId, selectEl, ajaxUrl) {
+            var btn = document.getElementById(btnId);
+            var form = document.getElementById(formId);
+            var confirm = document.getElementById(confirmId);
+            var cancel = document.getElementById(cancelId);
+            var nameInput = document.getElementById(nameInputId);
+
+            btn.addEventListener('click', function() {
+                form.classList.toggle('hidden');
+                if (!form.classList.contains('hidden')) nameInput.focus();
+            });
+
+            cancel.addEventListener('click', function() {
+                form.classList.add('hidden');
+                nameInput.value = '';
+            });
+
+            confirm.addEventListener('click', function() {
+                var name = nameInput.value.trim();
+                if (!name) return;
+                var fd = new FormData();
+                fd.append('name', name);
+                fetch(ajaxUrl, { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.error) { alert(data.error); return; }
+                        var opt = document.createElement('option');
+                        opt.value = data.id;
+                        opt.textContent = data.name;
+                        opt.selected = true;
+                        selectEl.appendChild(opt);
+                        form.classList.add('hidden');
+                        nameInput.value = '';
+                    });
+            });
+        }
+
+        setupInlineCreate(
+            'new-category-btn', 'new-category-form', 'new-category-confirm', 'new-category-cancel',
+            'new-category-name',
+            document.querySelector('select[name="category"]'),
+            '{% url "category_create_ajax" %}'
+        );
+
+        setupInlineCreate(
+            'new-series-btn', 'new-series-form', 'new-series-confirm', 'new-series-cancel',
+            'new-series-name',
+            document.querySelector('select[name="series"]'),
+            '{% url "series_create_ajax" %}'
+        );
+        </script>
+
+        {# Image upload JS #}
+        <script>
+        (function() {
+            var bodyTextarea = document.querySelector('textarea[name="body"]');
+            var fileInput = document.getElementById('image-file-input');
+            var uploadBtn = document.getElementById('image-upload-btn');
+            var statusEl = document.getElementById('image-upload-status');
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+            function insertAtCursor(text) {
+                var start = bodyTextarea.selectionStart;
+                var end = bodyTextarea.selectionEnd;
+                bodyTextarea.value = bodyTextarea.value.substring(0, start) + text + bodyTextarea.value.substring(end);
+                bodyTextarea.focus();
+                bodyTextarea.selectionStart = bodyTextarea.selectionEnd = start + text.length;
+            }
+
+            function showStatus(msg, ok) {
+                statusEl.textContent = msg;
+                statusEl.classList.remove('hidden');
+                statusEl.classList.toggle('text-red-500', !ok);
+                statusEl.classList.toggle('dark:text-red-400', !ok);
+                statusEl.classList.toggle('text-cyan-600', ok);
+                statusEl.classList.toggle('dark:text-cyan-400', ok);
+                if (ok) setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
+            }
+
+            function uploadFile(file) {
+                if (!file.type.match(/^image\//)) {
+                    showStatus('文件类型不是图片', false);
+                    return;
+                }
+                showStatus('上传中...', true);
+                var fd = new FormData();
+                fd.append('image', file);
+                fetch('{% url "image_upload_ajax" %}', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.error) { showStatus(data.error, false); return; }
+                        insertAtCursor('![' + data.name + '](' + data.url + ')');
+                        showStatus('已插入', true);
+                    })
+                    .catch(function() { showStatus('上传失败', false); });
+            }
+
+            // Button click → file picker
+            uploadBtn.addEventListener('click', function() { fileInput.click(); });
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files[0]) { uploadFile(fileInput.files[0]); fileInput.value = ''; }
+            });
+
+            // Paste image
+            bodyTextarea.addEventListener('paste', function(e) {
+                var items = e.clipboardData && e.clipboardData.items;
+                if (!items) return;
+                for (var i = 0; i < items.length; i++) {
+                    if (items[i].type.match(/^image\//)) {
+                        e.preventDefault();
+                        uploadFile(items[i].getAsFile());
+                        return;
+                    }
+                }
+            });
+
+            // Drag & drop
+            bodyTextarea.addEventListener('dragover', function(e) { e.preventDefault(); });
+            bodyTextarea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                var file = e.dataTransfer.files[0];
+                if (file) uploadFile(file);
+            });
+        })();
+        </script>
+
         {% if form.instance.pk %}
-        <div class="text-xs font-mono text-slate-600">
+        <div class="text-xs font-mono text-slate-400 dark:text-slate-600">
             UUID: {{ form.instance.unique_id }}
         </div>
         {% endif %}
 
-        <div class="flex items-center gap-4 pt-4 border-t border-slate-900">
+        <div class="flex items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-900">
             <button type="submit"
-                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm">
+                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
                 {% if form.instance.pk %}保存修改{% else %}发布文章{% endif %}
             </button>
-            <a href="{% if form.instance.pk %}{% url 'post_detail' form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
-               class="px-6 py-3 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-slate-300 transition font-mono text-sm">
+            <a href="{% if form.instance.pk %}{% url 'post_detail' username=form.instance.author.username slug=form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
+               class="px-4 py-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">
                 取消
             </a>
         </div>

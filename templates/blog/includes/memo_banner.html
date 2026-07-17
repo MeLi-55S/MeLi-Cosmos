@@ -1,9 +1,23 @@
-{% if latest_memo %}
-<div class="bg-slate-950/40 border border-slate-900 rounded-xl p-4 flex items-start space-x-3 backdrop-blur-md">
-    <span class="text-xl">🛰️</span>
-    <div class="text-xs md:text-sm text-slate-400 font-mono">
-        <span class="text-cyan-500 font-bold">当前状态：</span> {{ latest_memo.content }}
-        <span class="text-slate-600 block mt-1">{{ latest_memo.created_time|date:"Y年n月j日 H:i" }}</span>
+{% if latest_memos %}
+<div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl p-4 backdrop-blur-md">
+    <div class="flex items-center gap-2 mb-3">
+        <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400 font-bold">最新碎碎念</span>
+        <span class="text-xs font-mono text-slate-400 dark:text-slate-500">（48小时内）</span>
+    </div>
+    <div class="space-y-3">
+        {% for memo in latest_memos %}
+        <div class="flex items-start gap-3">
+            <img src="{% if memo.author.profile.avatar %}{{ memo.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ memo.author.username }}{% endif %}"
+                 class="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 mt-0.5 object-cover"
+                 alt="" width="28" height="28">
+            <div class="text-xs font-mono min-w-0">
+                <a href="{% url 'user_space' username=memo.author.username %}"
+                   class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-bold">@{{ memo.author.username }}</a>
+                <span class="text-slate-400 dark:text-slate-500 ml-1">{{ memo.content|truncatechars:80 }}</span>
+                <span class="text-slate-400 dark:text-slate-600 ml-2">{{ memo.created_time|date:"m-d H:i" }}</span>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 </div>
 {% endif %}

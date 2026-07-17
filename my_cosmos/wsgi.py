@@ -1,5 +1,5 @@
 """
-WSGI config for Project MyCosmos v2.0.
+WSGI config for MeLi Cosmos v2.0.
 Production: Gunicorn -> my_cosmos.wsgi:application
 """
 import os

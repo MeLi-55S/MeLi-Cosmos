@@ -1,0 +1,26 @@
+{% extends "blog/base.html" %}
+
+{% block content %}
+<div class="flex items-center justify-center min-h-[80vh]">
+    <div class="text-center px-4">
+        <h1 class="text-4xl md:text-6xl font-bold bg-gradient-to-r from-cyan-400 to-indigo-500 bg-clip-text text-transparent mb-6 font-mono">
+            MeLi Cosmos
+        </h1>
+        <p class="text-sm md:text-base text-slate-500 dark:text-slate-400 font-light mb-10 max-w-md mx-auto leading-relaxed">
+            极简主义个人博客，记录后端开发、游戏与运维的点滴。
+        </p>
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <a href="{% url 'index' %}"
+               class="px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20">
+                开始探索
+            </a>
+            {% if user.is_authenticated %}
+            <a href="{% url 'user_space' username=user.username %}"
+               class="px-8 py-3.5 border border-slate-200 dark:border-slate-900 rounded-xl hover:border-cyan-400 dark:hover:border-cyan-500/40 transition font-mono text-sm text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400">
+                我的空间
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

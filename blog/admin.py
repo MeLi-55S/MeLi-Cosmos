@@ -1,24 +1,28 @@
 """
-Project MyCosmos v2.0 - Admin Configuration.
+MeLi Cosmos v3.0 - Admin Configuration (multi-user).
 """
 from django.contrib import admin
-from django.utils.html import format_html
 
-from .models import Category, Tag, Post, Memo, Series
+from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode
 
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug"]
+    list_display = ["name", "slug", "author"]
     search_fields = ["name"]
-    prepopulated_fields = {"slug": ("name",)}
+    list_filter = ["author"]
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj:
+            return ["author"]
+        return []
 
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug"]
+    list_display = ["name", "slug", "author"]
     search_fields = ["name"]
-    prepopulated_fields = {"slug": ("name",)}
+    list_filter = ["author"]
 
 
 @admin.register(Post)
@@ -33,9 +37,8 @@ class PostAdmin(admin.ModelAdmin):
         "created_time",
         "unique_id_short",
     ]
-    list_filter = ["status", "category", "tags", "series", "created_time"]
+    list_filter = ["status", "category", "tags", "series", "author", "created_time"]
     search_fields = ["title", "body", "unique_id"]
-    prepopulated_fields = {"slug": ("title",)}
     filter_horizontal = ["tags"]
     date_hierarchy = "created_time"
     readonly_fields = ["unique_id", "views", "created_time", "modified_time"]
@@ -61,17 +64,35 @@ class PostAdmin(admin.ModelAdmin):
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
-    list_display = ["name", "slug", "description"]
+    list_display = ["name", "slug", "author", "description"]
     search_fields = ["name"]
-    prepopulated_fields = {"slug": ("name",)}
+    list_filter = ["author"]
 
 
 @admin.register(Memo)
 class MemoAdmin(admin.ModelAdmin):
-    list_display = ["content_short", "is_public", "created_time"]
-    list_filter = ["is_public", "created_time"]
+    list_display = ["content_short", "author", "is_public", "created_time"]
+    list_filter = ["is_public", "author", "created_time"]
     search_fields = ["content"]
 
     @admin.display(description="内容")
     def content_short(self, obj):
         return obj.content[:30]
+
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ["user", "display_name", "title"]
+    search_fields = ["user__username", "display_name"]
+
+
+@admin.register(InviteCode)
+class InviteCodeAdmin(admin.ModelAdmin):
+    list_display = ["code_short", "inviter", "invitee", "is_used", "created_at", "expires_at"]
+    list_filter = ["is_used", "created_at"]
+    search_fields = ["code", "inviter__username", "invitee__username"]
+    readonly_fields = ["code", "created_at"]
+
+    @admin.display(description="邀请码")
+    def code_short(self, obj):
+        return obj.code[:16] + "..."

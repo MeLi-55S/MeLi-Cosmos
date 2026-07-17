@@ -1,37 +1,57 @@
 {% extends "blog/base.html" %}
 
-{% block title %}碎碎念 - Project MyCosmos{% endblock %}
+{% block title %}碎碎念 - MeLi Cosmos{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto pt-8">
-    <h1 class="text-2xl md:text-3xl font-bold text-slate-100 mb-8 font-mono">💬 碎碎念</h1>
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">💬 碎碎念</h1>
 
     <form method="post" class="space-y-6">
         {% csrf_token %}
 
         <div>
-            <label for="{{ form.content.id_for_label }}" class="block text-xs font-mono text-slate-400 mb-2">内容</label>
+            <label for="{{ form.content.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">内容</label>
             {{ form.content }}
             {% if form.content.errors %}
-            <p class="text-xs text-red-400 mt-1 font-mono">{{ form.content.errors.0 }}</p>
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.content.errors.0 }}</p>
             {% endif %}
         </div>
 
         <div class="flex items-center space-x-3">
             {{ form.is_public }}
-            <label for="{{ form.is_public.id_for_label }}" class="text-xs font-mono text-slate-400">公开</label>
+            <label for="{{ form.is_public.id_for_label }}" class="text-xs font-mono text-slate-500 dark:text-slate-400">公开</label>
         </div>
 
-        <div class="flex items-center gap-4 pt-4 border-t border-slate-900">
+        <div class="flex items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-900">
             <button type="submit"
-                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm">
+                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
                 发布
             </button>
             <a href="{% url 'memo_list' %}"
-               class="px-6 py-3 bg-slate-900 border border-slate-800 text-slate-400 rounded-xl hover:text-slate-300 transition font-mono text-sm">
+               class="px-4 py-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">
                 取消
             </a>
         </div>
     </form>
 </div>
+
+<script>
+(function() {
+    var form = document.querySelector('form');
+    var textarea = form.querySelector('textarea');
+
+    // Enter key submits the form (Shift+Enter still allows newlines)
+    textarea.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            form.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    });
+
+    // Replace newlines with spaces before submit
+    form.addEventListener('submit', function(e) {
+        textarea.value = textarea.value.replace(/\n/g, ' ');
+    });
+})();
+</script>
 {% endblock %}

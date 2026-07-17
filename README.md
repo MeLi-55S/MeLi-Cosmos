@@ -1,4 +1,4 @@
-# 🌌 Project MyCosmos v2.0
+# 🌌 MeLi Cosmos v2.0
 
 > Minimalist Django personal blog — pure Markdown, Tailwind CSS, zero template bloat.
 

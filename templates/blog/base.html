@@ -1,142 +1,261 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+{% load static %}
+<html lang="zh-CN" class="dark">
 <head>
+    <script>
+    // Anti-FOUC: apply stored theme before first paint
+    (function() {
+        var theme = localStorage.getItem('theme');
+        var html = document.documentElement;
+        if (theme === 'light') {
+            html.classList.remove('dark');
+        } else if (theme === 'system' || theme === null) {
+            if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+                html.classList.remove('dark');
+            }
+        }
+    })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}🌌 Project MyCosmos{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}">
+    <title>{% block title %}MeLi Cosmos{% endblock %}</title>
 
     {# SEO Meta #}
     <meta name="description" content="{% block meta_description %}极简主义个人博客，记录后端开发、游戏与运维的点滴。{% endblock %}">
-    <meta property="og:title" content="{% block og_title %}Project MyCosmos{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}MeLi Cosmos{% endblock %}">
     <meta property="og:description" content="{% block og_description %}极简主义个人博客，记录后端开发、游戏与运维的点滴。{% endblock %}">
     <meta property="og:type" content="{% block og_type %}website{% endblock %}">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
     <meta name="twitter:card" content="summary">
 
     {# RSS Auto-discovery #}
-    <link rel="alternate" type="application/rss+xml" title="Project MyCosmos RSS 订阅" href="{% url 'rss_feed' %}">
+    <link rel="alternate" type="application/rss+xml" title="MeLi Cosmos RSS 订阅" href="{% url 'rss_feed' %}">
 
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="{% static 'tailwindcss-browser.js' %}"></script>
+    <style type="text/tailwindcss">
+        @import "tailwindcss";
+        @custom-variant dark (&:where(.dark, .dark *));
+    </style>
+    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         code, pre { font-family: 'JetBrains Mono', monospace; }
 
         /* Pygments Dark Theme - Monokai-inspired code highlighting */
-        .codehilite { background: #030712; border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; margin: 1rem 0; position: relative; }
-        .codehilite pre { margin: 0; background: transparent; padding-right: 3rem; }
-        .codehilite .hll { background-color: #272822; }
-        .codehilite .c { color: #6c7a89; font-style: italic; }
-        .codehilite .err { color: #f92672; }
-        .codehilite .k { color: #66d9ef; }
-        .codehilite .o { color: #f92672; }
-        .codehilite .cm { color: #6c7a89; font-style: italic; }
-        .codehilite .cp { color: #6c7a89; font-style: italic; }
-        .codehilite .c1 { color: #6c7a89; font-style: italic; }
-        .codehilite .cs { color: #6c7a89; font-style: italic; }
-        .codehilite .gd { color: #f92672; }
-        .codehilite .ge { font-style: italic; }
-        .codehilite .gr { color: #f92672; }
-        .codehilite .gh { color: #e6db74; }
-        .codehilite .gi { color: #a6e22e; }
-        .codehilite .go { color: #88846f; }
-        .codehilite .gp { color: #88846f; }
-        .codehilite .gs { font-weight: bold; }
-        .codehilite .gu { color: #ae81ff; }
-        .codehilite .gt { color: #f92672; }
-        .codehilite .kc { color: #66d9ef; }
-        .codehilite .kd { color: #66d9ef; }
-        .codehilite .kn { color: #f92672; }
-        .codehilite .kp { color: #66d9ef; }
-        .codehilite .kr { color: #66d9ef; }
-        .codehilite .kt { color: #66d9ef; }
-        .codehilite .m { color: #ae81ff; }
-        .codehilite .s { color: #e6db74; }
-        .codehilite .na { color: #a6e22e; }
-        .codehilite .nb { color: #f8f8f2; }
-        .codehilite .nc { color: #a6e22e; }
-        .codehilite .no { color: #66d9ef; }
-        .codehilite .nd { color: #a6e22e; }
-        .codehilite .ni { color: #f8f8f2; }
-        .codehilite .ne { color: #a6e22e; }
-        .codehilite .nf { color: #a6e22e; }
-        .codehilite .nl { color: #f8f8f2; }
-        .codehilite .nn { color: #f8f8f2; }
-        .codehilite .nx { color: #a6e22e; }
-        .codehilite .py { color: #f8f8f2; }
-        .codehilite .nt { color: #f92672; }
-        .codehilite .nv { color: #f8f8f2; }
-        .codehilite .ow { color: #f92672; }
-        .codehilite .w { color: #f8f8f2; }
-        .codehilite .mf { color: #ae81ff; }
-        .codehilite .mh { color: #ae81ff; }
-        .codehilite .mi { color: #ae81ff; }
-        .codehilite .mo { color: #ae81ff; }
-        .codehilite .sb { color: #e6db74; }
-        .codehilite .sc { color: #e6db74; }
-        .codehilite .sd { color: #e6db74; }
-        .codehilite .s2 { color: #e6db74; }
-        .codehilite .se { color: #ae81ff; }
-        .codehilite .sh { color: #e6db74; }
-        .codehilite .si { color: #e6db74; }
-        .codehilite .sx { color: #e6db74; }
-        .codehilite .sr { color: #e6db74; }
-        .codehilite .s1 { color: #e6db74; }
-        .codehilite .ss { color: #e6db74; }
-        .codehilite .bp { color: #f8f8f2; }
-        .codehilite .vc { color: #f8f8f2; }
-        .codehilite .vg { color: #f8f8f2; }
-        .codehilite .vi { color: #f8f8f2; }
-        .codehilite .il { color: #ae81ff; }
+        html.dark .codehilite { background: #030712; border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; margin: 1rem 0; position: relative; }
+        html.dark .codehilite pre { margin: 0; background: transparent; padding-right: 3rem; }
+        html.dark .codehilite .hll { background-color: #272822; }
+        html.dark .codehilite .c { color: #6c7a89; font-style: italic; }
+        html.dark .codehilite .err { color: #f92672; }
+        html.dark .codehilite .k { color: #66d9ef; }
+        html.dark .codehilite .o { color: #f92672; }
+        html.dark .codehilite .cm { color: #6c7a89; font-style: italic; }
+        html.dark .codehilite .cp { color: #6c7a89; font-style: italic; }
+        html.dark .codehilite .c1 { color: #6c7a89; font-style: italic; }
+        html.dark .codehilite .cs { color: #6c7a89; font-style: italic; }
+        html.dark .codehilite .gd { color: #f92672; }
+        html.dark .codehilite .ge { font-style: italic; }
+        html.dark .codehilite .gr { color: #f92672; }
+        html.dark .codehilite .gh { color: #e6db74; }
+        html.dark .codehilite .gi { color: #a6e22e; }
+        html.dark .codehilite .go { color: #88846f; }
+        html.dark .codehilite .gp { color: #88846f; }
+        html.dark .codehilite .gs { font-weight: bold; }
+        html.dark .codehilite .gu { color: #ae81ff; }
+        html.dark .codehilite .gt { color: #f92672; }
+        html.dark .codehilite .kc { color: #66d9ef; }
+        html.dark .codehilite .kd { color: #66d9ef; }
+        html.dark .codehilite .kn { color: #f92672; }
+        html.dark .codehilite .kp { color: #66d9ef; }
+        html.dark .codehilite .kr { color: #66d9ef; }
+        html.dark .codehilite .kt { color: #66d9ef; }
+        html.dark .codehilite .m { color: #ae81ff; }
+        html.dark .codehilite .s { color: #e6db74; }
+        html.dark .codehilite .na { color: #a6e22e; }
+        html.dark .codehilite .nb { color: #f8f8f2; }
+        html.dark .codehilite .nc { color: #a6e22e; }
+        html.dark .codehilite .no { color: #66d9ef; }
+        html.dark .codehilite .nd { color: #a6e22e; }
+        html.dark .codehilite .ni { color: #f8f8f2; }
+        html.dark .codehilite .ne { color: #a6e22e; }
+        html.dark .codehilite .nf { color: #a6e22e; }
+        html.dark .codehilite .nl { color: #f8f8f2; }
+        html.dark .codehilite .nn { color: #f8f8f2; }
+        html.dark .codehilite .nx { color: #a6e22e; }
+        html.dark .codehilite .py { color: #f8f8f2; }
+        html.dark .codehilite .nt { color: #f92672; }
+        html.dark .codehilite .nv { color: #f8f8f2; }
+        html.dark .codehilite .ow { color: #f92672; }
+        html.dark .codehilite .w { color: #f8f8f2; }
+        html.dark .codehilite .mf { color: #ae81ff; }
+        html.dark .codehilite .mh { color: #ae81ff; }
+        html.dark .codehilite .mi { color: #ae81ff; }
+        html.dark .codehilite .mo { color: #ae81ff; }
+        html.dark .codehilite .sb { color: #e6db74; }
+        html.dark .codehilite .sc { color: #e6db74; }
+        html.dark .codehilite .sd { color: #e6db74; }
+        html.dark .codehilite .s2 { color: #e6db74; }
+        html.dark .codehilite .se { color: #ae81ff; }
+        html.dark .codehilite .sh { color: #e6db74; }
+        html.dark .codehilite .si { color: #e6db74; }
+        html.dark .codehilite .sx { color: #e6db74; }
+        html.dark .codehilite .sr { color: #e6db74; }
+        html.dark .codehilite .s1 { color: #e6db74; }
+        html.dark .codehilite .ss { color: #e6db74; }
+        html.dark .codehilite .bp { color: #f8f8f2; }
+        html.dark .codehilite .vc { color: #f8f8f2; }
+        html.dark .codehilite .vg { color: #f8f8f2; }
+        html.dark .codehilite .vi { color: #f8f8f2; }
+        html.dark .codehilite .il { color: #ae81ff; }
 
-        /* Markdown content typography — replaces Tailwind Typography plugin */
-        .md-content h1 { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; margin: 2rem 0 1rem; line-height: 1.3; }
-        .md-content h2 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin: 1.75rem 0 0.75rem; line-height: 1.35; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
-        .md-content h3 { font-size: 1.15rem; font-weight: 600; color: #cbd5e1; margin: 1.5rem 0 0.5rem; line-height: 1.4; }
-        .md-content h4, .md-content h5, .md-content h6 { font-size: 1rem; font-weight: 600; color: #94a3b8; margin: 1.25rem 0 0.5rem; }
-        .md-content p { margin: 0.75rem 0; line-height: 1.8; }
-        .md-content ul, .md-content ol { margin: 0.75rem 0; padding-left: 1.5rem; }
-        .md-content li { margin: 0.25rem 0; line-height: 1.7; }
-        .md-content blockquote { border-left: 3px solid #06b6d4; padding: 0.5rem 1rem; margin: 1rem 0; background: #0f172a; border-radius: 0 0.5rem 0.5rem 0; color: #94a3b8; font-style: italic; }
-        .md-content a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
-        .md-content a:hover { color: #67e8f9; }
-        .md-content img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
-        .md-content hr { border: 0; border-top: 1px solid #1e293b; margin: 2rem 0; }
-        .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
-        .md-content th { background: #1e293b; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #e2e8f0; border: 1px solid #334155; }
-        .md-content td { padding: 0.5rem 0.75rem; border: 1px solid #1e293b; }
-        .md-content code { background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; color: #f1f5f9; }
-        .md-content strong { color: #e2e8f0; font-weight: 600; }
-        .md-content em { color: #cbd5e1; }
+        /* Pygments Light Theme - GitHub-inspired code highlighting */
+        html:not(.dark) .codehilite { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; margin: 1rem 0; position: relative; }
+        html:not(.dark) .codehilite pre { margin: 0; background: transparent; padding-right: 3rem; }
+        html:not(.dark) .codehilite .hll { background-color: #f0fff0; }
+        html:not(.dark) .codehilite .c { color: #6e7781; font-style: italic; }
+        html:not(.dark) .codehilite .err { color: #cf222e; }
+        html:not(.dark) .codehilite .k { color: #cf222e; }
+        html:not(.dark) .codehilite .o { color: #0550ae; }
+        html:not(.dark) .codehilite .cm { color: #6e7781; font-style: italic; }
+        html:not(.dark) .codehilite .cp { color: #6e7781; font-style: italic; }
+        html:not(.dark) .codehilite .c1 { color: #6e7781; font-style: italic; }
+        html:not(.dark) .codehilite .cs { color: #6e7781; font-style: italic; }
+        html:not(.dark) .codehilite .gd { color: #cf222e; }
+        html:not(.dark) .codehilite .ge { font-style: italic; }
+        html:not(.dark) .codehilite .gr { color: #cf222e; }
+        html:not(.dark) .codehilite .gh { color: #0550ae; font-weight: bold; }
+        html:not(.dark) .codehilite .gi { color: #116329; }
+        html:not(.dark) .codehilite .go { color: #6e7781; }
+        html:not(.dark) .codehilite .gp { color: #656d76; }
+        html:not(.dark) .codehilite .gs { font-weight: bold; }
+        html:not(.dark) .codehilite .gu { color: #8250df; }
+        html:not(.dark) .codehilite .gt { color: #cf222e; }
+        html:not(.dark) .codehilite .kc { color: #cf222e; }
+        html:not(.dark) .codehilite .kd { color: #cf222e; }
+        html:not(.dark) .codehilite .kn { color: #cf222e; }
+        html:not(.dark) .codehilite .kp { color: #cf222e; }
+        html:not(.dark) .codehilite .kr { color: #cf222e; }
+        html:not(.dark) .codehilite .kt { color: #cf222e; }
+        html:not(.dark) .codehilite .m { color: #0550ae; }
+        html:not(.dark) .codehilite .s { color: #0a3069; }
+        html:not(.dark) .codehilite .na { color: #116329; }
+        html:not(.dark) .codehilite .nb { color: #0550ae; }
+        html:not(.dark) .codehilite .nc { color: #953800; }
+        html:not(.dark) .codehilite .no { color: #0550ae; }
+        html:not(.dark) .codehilite .nd { color: #8250df; }
+        html:not(.dark) .codehilite .ni { color: #1f2328; }
+        html:not(.dark) .codehilite .ne { color: #953800; }
+        html:not(.dark) .codehilite .nf { color: #953800; }
+        html:not(.dark) .codehilite .nl { color: #1f2328; }
+        html:not(.dark) .codehilite .nn { color: #1f2328; }
+        html:not(.dark) .codehilite .nx { color: #116329; }
+        html:not(.dark) .codehilite .py { color: #1f2328; }
+        html:not(.dark) .codehilite .nt { color: #cf222e; }
+        html:not(.dark) .codehilite .nv { color: #1f2328; }
+        html:not(.dark) .codehilite .ow { color: #0550ae; }
+        html:not(.dark) .codehilite .w { color: #1f2328; }
+        html:not(.dark) .codehilite .mf { color: #0550ae; }
+        html:not(.dark) .codehilite .mh { color: #0550ae; }
+        html:not(.dark) .codehilite .mi { color: #0550ae; }
+        html:not(.dark) .codehilite .mo { color: #0550ae; }
+        html:not(.dark) .codehilite .sb { color: #0a3069; }
+        html:not(.dark) .codehilite .sc { color: #0a3069; }
+        html:not(.dark) .codehilite .sd { color: #0a3069; }
+        html:not(.dark) .codehilite .s2 { color: #0a3069; }
+        html:not(.dark) .codehilite .se { color: #0550ae; }
+        html:not(.dark) .codehilite .sh { color: #0a3069; }
+        html:not(.dark) .codehilite .si { color: #0a3069; }
+        html:not(.dark) .codehilite .sx { color: #0a3069; }
+        html:not(.dark) .codehilite .sr { color: #0a3069; }
+        html:not(.dark) .codehilite .s1 { color: #0a3069; }
+        html:not(.dark) .codehilite .ss { color: #0550ae; }
+        html:not(.dark) .codehilite .bp { color: #1f2328; }
+        html:not(.dark) .codehilite .vc { color: #1f2328; }
+        html:not(.dark) .codehilite .vg { color: #1f2328; }
+        html:not(.dark) .codehilite .vi { color: #1f2328; }
+        html:not(.dark) .codehilite .il { color: #0550ae; }
+
+        /* Markdown content typography - Dark */
+        html.dark .md-content h1 { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; margin: 2rem 0 1rem; line-height: 1.3; }
+        html.dark .md-content h2 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin: 1.75rem 0 0.75rem; line-height: 1.35; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+        html.dark .md-content h3 { font-size: 1.15rem; font-weight: 600; color: #cbd5e1; margin: 1.5rem 0 0.5rem; line-height: 1.4; }
+        html.dark .md-content h4, html.dark .md-content h5, html.dark .md-content h6 { font-size: 1rem; font-weight: 600; color: #94a3b8; margin: 1.25rem 0 0.5rem; }
+        html.dark .md-content p { margin: 0.75rem 0; line-height: 1.8; }
+        html.dark .md-content ul, html.dark .md-content ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+        html.dark .md-content li { margin: 0.25rem 0; line-height: 1.7; }
+        html.dark .md-content blockquote { border-left: 3px solid #06b6d4; padding: 0.5rem 1rem; margin: 1rem 0; background: #0f172a; border-radius: 0 0.5rem 0.5rem 0; color: #94a3b8; font-style: italic; }
+        html.dark .md-content a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
+        html.dark .md-content a:hover { color: #67e8f9; }
+        html.dark .md-content img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
+        html.dark .md-content hr { border: 0; border-top: 1px solid #1e293b; margin: 2rem 0; }
+        html.dark .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
+        html.dark .md-content th { background: #1e293b; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #e2e8f0; border: 1px solid #334155; }
+        html.dark .md-content td { padding: 0.5rem 0.75rem; border: 1px solid #1e293b; }
+        html.dark .md-content code { background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; color: #f1f5f9; }
+        html.dark .md-content strong { color: #e2e8f0; font-weight: 600; }
+        html.dark .md-content em { color: #cbd5e1; }
+
+        /* Markdown content typography - Light */
+        html:not(.dark) .md-content h1 { font-size: 1.75rem; font-weight: 700; color: #0f172a; margin: 2rem 0 1rem; line-height: 1.3; }
+        html:not(.dark) .md-content h2 { font-size: 1.4rem; font-weight: 700; color: #1e293b; margin: 1.75rem 0 0.75rem; line-height: 1.35; padding-bottom: 0.5rem; border-bottom: 1px solid #e2e8f0; }
+        html:not(.dark) .md-content h3 { font-size: 1.15rem; font-weight: 600; color: #334155; margin: 1.5rem 0 0.5rem; line-height: 1.4; }
+        html:not(.dark) .md-content h4, html:not(.dark) .md-content h5, html:not(.dark) .md-content h6 { font-size: 1rem; font-weight: 600; color: #64748b; margin: 1.25rem 0 0.5rem; }
+        html:not(.dark) .md-content p { margin: 0.75rem 0; line-height: 1.8; }
+        html:not(.dark) .md-content ul, html:not(.dark) .md-content ol { margin: 0.75rem 0; padding-left: 1.5rem; }
+        html:not(.dark) .md-content li { margin: 0.25rem 0; line-height: 1.7; }
+        html:not(.dark) .md-content blockquote { border-left: 3px solid #06b6d4; padding: 0.5rem 1rem; margin: 1rem 0; background: #f0fdfa; border-radius: 0 0.5rem 0.5rem 0; color: #475569; font-style: italic; }
+        html:not(.dark) .md-content a { color: #0891b2; text-decoration: underline; text-underline-offset: 2px; }
+        html:not(.dark) .md-content a:hover { color: #0e7490; }
+        html:not(.dark) .md-content img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
+        html:not(.dark) .md-content hr { border: 0; border-top: 1px solid #e2e8f0; margin: 2rem 0; }
+        html:not(.dark) .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
+        html:not(.dark) .md-content th { background: #f1f5f9; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #334155; border: 1px solid #cbd5e1; }
+        html:not(.dark) .md-content td { padding: 0.5rem 0.75rem; border: 1px solid #e2e8f0; }
+        html:not(.dark) .md-content code { background: #f1f5f9; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; color: #0f172a; }
+        html:not(.dark) .md-content strong { color: #0f172a; font-weight: 600; }
+        html:not(.dark) .md-content em { color: #334155; }
 
         /* Code copy button */
         .codehilite:hover .copy-btn { opacity: 1; }
         .copy-btn {
             position: absolute; top: 0.5rem; right: 0.5rem;
             padding: 0.25rem 0.5rem;
-            background: #1e293b; border: 1px solid #334155; border-radius: 0.375rem;
-            color: #94a3b8; font-size: 0.75rem; cursor: pointer;
+            background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 0.375rem;
+            color: #64748b; font-size: 0.75rem; cursor: pointer;
             opacity: 0; transition: opacity 0.2s;
         }
-        .copy-btn:hover { background: #334155; color: #e2e8f0; }
-        .copy-btn.copied { color: #4ade80; border-color: #4ade80; }
+        .copy-btn:hover { background: #e2e8f0; color: #334155; }
+        .copy-btn.copied { color: #16a34a; border-color: #16a34a; }
+        html.dark .copy-btn { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        html.dark .copy-btn:hover { background: #334155; color: #e2e8f0; }
+        html.dark .copy-btn.copied { color: #4ade80; border-color: #4ade80; }
 
         /* Back to top button */
         #back-to-top {
             position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 40;
             width: 2.5rem; height: 2.5rem;
-            background: #1e293b; border: 1px solid #334155; border-radius: 9999px;
-            color: #94a3b8; font-size: 1.25rem; cursor: pointer;
+            background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 9999px;
+            color: #64748b; font-size: 1.25rem; cursor: pointer;
             opacity: 0; transform: translateY(1rem);
             transition: opacity 0.3s, transform 0.3s;
             display: flex; align-items: center; justify-content: center;
         }
         #back-to-top.visible { opacity: 1; transform: translateY(0); }
-        #back-to-top:hover { background: #334155; color: #22d3ee; border-color: #22d3ee; }
+        #back-to-top:hover { background: #e2e8f0; color: #0891b2; border-color: #0891b2; }
+        html.dark #back-to-top { background: #1e293b; border-color: #334155; color: #94a3b8; }
+        html.dark #back-to-top:hover { background: #334155; color: #22d3ee; border-color: #22d3ee; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-[#050a14] text-slate-300 antialiased min-h-screen flex flex-col selection:bg-blue-500/30 selection:text-blue-200">
+<body class="bg-slate-50 dark:bg-[#050a14] text-slate-700 dark:text-slate-300 antialiased min-h-screen flex flex-col selection:bg-cyan-500/40 selection:text-white">
 
     {% include "blog/includes/nav.html" %}
 
@@ -149,7 +268,7 @@
     {# 返回顶部按钮 #}
     <button id="back-to-top" aria-label="返回顶部" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
-    {# 代码复制 + 返回顶部行为 #}
+    {# 代码复制 + 返回顶部行为 + 主题切换 #}
     <script>
     // 为所有代码块注入复制按钮
     document.querySelectorAll('.codehilite').forEach(function(block) {
@@ -179,6 +298,114 @@
             btt.classList.remove('visible');
         }
     });
+
+    // 表单提交防重复：禁用提交按钮 + 显示"提交中..."
+    document.addEventListener('submit', function(e) {
+        var form = e.target;
+        if (form.method.toLowerCase() !== 'post') return;
+        var btn = form.querySelector('button[type="submit"]');
+        if (!btn || btn.dataset.guarded) return;
+        var origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = '提交中...';
+        btn.dataset.guarded = '1';
+    });
+
+    // ===== Theme Switcher =====
+    (function() {
+        var html = document.documentElement;
+
+        function getTheme() {
+            return localStorage.getItem('theme') || 'system';
+        }
+
+        function setTheme(theme) {
+            localStorage.setItem('theme', theme);
+            applyTheme(theme);
+            updateUI(theme);
+        }
+
+        function applyTheme(theme) {
+            if (theme === 'light') {
+                html.classList.remove('dark');
+            } else if (theme === 'dark') {
+                html.classList.add('dark');
+            } else {
+                if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+                    html.classList.remove('dark');
+                } else {
+                    html.classList.add('dark');
+                }
+            }
+        }
+
+        function updateUI(theme) {
+            var sun = document.getElementById('theme-icon-sun');
+            var moon = document.getElementById('theme-icon-moon');
+            var monitor = document.getElementById('theme-icon-monitor');
+            if (sun && moon && monitor) {
+                sun.classList.add('hidden');
+                moon.classList.add('hidden');
+                monitor.classList.add('hidden');
+                if (theme === 'light') sun.classList.remove('hidden');
+                else if (theme === 'dark') moon.classList.remove('hidden');
+                else monitor.classList.remove('hidden');
+            }
+            var label = document.getElementById('theme-label-mobile');
+            if (label) {
+                var names = { light: '日间', dark: '夜间', system: '系统' };
+                label.textContent = '主题：' + (names[theme] || '系统');
+            }
+        }
+
+        function cycleTheme() {
+            var current = getTheme();
+            var next = current === 'light' ? 'dark' : current === 'dark' ? 'system' : 'light';
+            setTheme(next);
+        }
+
+        var btn = document.getElementById('theme-toggle');
+        if (btn) btn.addEventListener('click', cycleTheme);
+
+        var btnMobile = document.getElementById('theme-toggle-mobile');
+        if (btnMobile) btnMobile.addEventListener('click', cycleTheme);
+
+        var mq = window.matchMedia('(prefers-color-scheme: light)');
+        mq.addEventListener('change', function() {
+            if (getTheme() === 'system') applyTheme('system');
+        });
+
+        updateUI(getTheme());
+    })();
+
+    // Quick memo form: Enter to submit, replace newlines with spaces
+    (function() {
+        var quickForm = document.querySelector('form[action$="memo/create/"]');
+        if (quickForm) {
+            var qta = quickForm.querySelector('textarea');
+            if (qta) {
+                qta.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        quickForm.dispatchEvent(new Event('submit', { cancelable: true }));
+                    }
+                });
+            }
+            quickForm.addEventListener('submit', function() {
+                if (qta) qta.value = qta.value.replace(/\n/g, ' ');
+            });
+        }
+    })();
+
+    // 移动端汉堡菜单 toggle
+    var menuToggle = document.getElementById('menu-toggle');
+    var mobileMenu = document.getElementById('mobile-menu');
+    if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', function() {
+            var expanded = mobileMenu.classList.toggle('hidden');
+            menuToggle.setAttribute('aria-expanded', !expanded);
+        });
+    }
     </script>
 </body>
 </html>
