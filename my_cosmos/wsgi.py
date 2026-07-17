@@ -2,6 +2,9 @@
 WSGI config for MeLi Cosmos v2.0.
 Production: Gunicorn -> my_cosmos.wsgi:application
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 from django.core.wsgi import get_wsgi_application
 

@@ -1,6 +1,9 @@
 """
 ASGI config for MeLi Cosmos v2.0.
 """
+from dotenv import load_dotenv
+load_dotenv()
+
 import os
 from django.core.asgi import get_asgi_application
 

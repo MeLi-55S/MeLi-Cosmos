@@ -16,5 +16,6 @@ media/
 
 # 用户自定义
 explanations/
+.env
 .claude/
 .vscode/
