@@ -248,10 +248,20 @@
             var uploadBtn = document.getElementById('image-upload-btn');
             var statusEl = document.getElementById('image-upload-status');
             var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var savedCursor = null;  // {start, end} saved before textarea blurs
 
             function insertAtCursor(text) {
-                var start = bodyTextarea.selectionStart;
-                var end = bodyTextarea.selectionEnd;
+                var start, end;
+                if (savedCursor) {
+                    start = savedCursor.start;
+                    end = savedCursor.end;
+                    savedCursor = null;
+                } else if (document.activeElement === bodyTextarea) {
+                    start = bodyTextarea.selectionStart;
+                    end = bodyTextarea.selectionEnd;
+                } else {
+                    start = end = bodyTextarea.value.length;
+                }
                 bodyTextarea.value = bodyTextarea.value.substring(0, start) + text + bodyTextarea.value.substring(end);
                 bodyTextarea.focus();
                 bodyTextarea.selectionStart = bodyTextarea.selectionEnd = start + text.length;
@@ -285,8 +295,11 @@
                     .catch(function() { showStatus('上传失败', false); });
             }
 
-            // Button click → file picker
-            uploadBtn.addEventListener('click', function() { fileInput.click(); });
+            // Button click → save cursor, then file picker
+            uploadBtn.addEventListener('click', function() {
+                savedCursor = {start: bodyTextarea.selectionStart, end: bodyTextarea.selectionEnd};
+                fileInput.click();
+            });
             fileInput.addEventListener('change', function() {
                 if (fileInput.files[0]) { uploadFile(fileInput.files[0]); fileInput.value = ''; }
             });
