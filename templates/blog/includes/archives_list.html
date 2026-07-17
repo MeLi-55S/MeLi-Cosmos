@@ -1,0 +1,38 @@
+{# Archives content for user space tab. Expects: archives (OrderedDict) #}
+{% for key, posts in archives.items %}
+<div class="mb-8">
+    {% with year=key.0 month=key.1 %}
+    <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">{{ year }} 年</h2>
+    <h3 class="text-md font-mono text-cyan-600 dark:text-cyan-400 mb-4">{{ month }} 月</h3>
+    <div class="space-y-2">
+        {% for post in posts %}
+        <a href="{% url 'post_detail' username=post.author.username slug=post.slug %}"
+           class="block bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition group">
+            <div class="flex items-center justify-between">
+                <div class="min-w-0">
+                    <span class="text-sm text-slate-700 dark:text-slate-300 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition">{{ post.title }}</span>
+                    <div class="flex items-center gap-1 mt-1">
+                        <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username }}{% endif %}" class="w-4 h-4 rounded-full object-cover" alt="" width="16" height="16">
+                        <span class="text-xs text-slate-400 dark:text-slate-400 font-mono">@{{ post.author.username }}</span>
+                    </div>
+                </div>
+                <span class="text-xs text-slate-400 dark:text-slate-400 font-mono flex-shrink-0 ml-4">{{ post.created_time|date:"m-d" }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endwith %}
+</div>
+{% empty %}
+<div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center">
+    <p class="text-2xl mb-4">📂</p>
+    <p class="text-slate-500 dark:text-slate-400 font-mono text-sm mb-2 font-bold">还没有文章归档</p>
+    <p class="text-xs text-slate-400 dark:text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
+        当文章积累到一定数量后，这里将按年月整理成清晰的时间线。
+    </p>
+    <a href="{% url 'index' %}"
+       class="inline-block px-5 py-2.5 bg-cyan-100 dark:bg-cyan-500/20 border border-cyan-300 dark:border-cyan-500/40 text-cyan-600 dark:text-cyan-400 rounded-xl hover:bg-cyan-200 dark:hover:bg-cyan-500/30 transition font-mono text-sm">
+        &larr; 返回首页
+    </a>
+</div>
+{% endfor %}

@@ -7,9 +7,9 @@
     <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">📨 邀请码</h1>
 
     {# Generate invite code #}
-    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-6 shadow-lg dark:shadow-2xl mb-8">
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg dark:shadow-2xl mb-8">
         <h3 class="text-sm font-mono text-slate-700 dark:text-slate-300 mb-4">生成新的邀请码</h3>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mb-4">
+        <p class="text-xs text-slate-400 dark:text-slate-400 mb-4">
             邀请码有效期为 {{ invite_expire_hours }} 小时，非管理员每日限生成 1 个。
         </p>
 
@@ -30,26 +30,26 @@
             </button>
         </form>
         {% else %}
-        <button disabled class="px-6 py-3 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 rounded-xl font-mono text-sm cursor-not-allowed">
+        <button disabled class="px-6 py-3 bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-400 rounded-xl font-mono text-sm cursor-not-allowed">
             今日已达上限
         </button>
         {% endif %}
     </div>
 
     {# Invite code history #}
-    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-6 shadow-lg dark:shadow-2xl">
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg dark:shadow-2xl">
         <h3 class="text-sm font-mono text-slate-700 dark:text-slate-300 mb-4">我的邀请码</h3>
 
         {% if invite_codes %}
         <div class="space-y-3">
             {% for ic in invite_codes %}
-            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl p-4 flex items-center justify-between">
+            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-center justify-between">
                 <div class="min-w-0">
                     <code class="text-xs font-mono text-cyan-600 dark:text-cyan-400 break-all copy-code-target">{{ ic.code }}</code>
                     {% if not ic.is_used and not ic.is_expired %}
-                    <button type="button" class="copy-code-btn text-xs font-mono text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition ml-2 bg-transparent border-none cursor-pointer" data-code="{{ ic.code }}">复制</button>
+                    <button type="button" class="copy-code-btn text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition ml-2 bg-transparent border-none cursor-pointer" data-code="{{ ic.code }}">复制</button>
                     {% endif %}
-                    <div class="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                    <div class="text-xs text-slate-400 dark:text-slate-400 mt-1">
                         创建于 {{ ic.created_at|date:"Y-m-d H:i" }}
                         {% if ic.is_used %}
                         · 被 <span class="text-green-600 dark:text-green-400">{{ ic.invitee.username }}</span> 使用于 {{ ic.used_at|date:"Y-m-d H:i" }}
@@ -67,7 +67,7 @@
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-xs text-slate-400 dark:text-slate-500 font-mono">还没有生成邀请码。</p>
+        <p class="text-xs text-slate-400 dark:text-slate-400 font-mono">还没有生成邀请码。</p>
         {% endif %}
     </div>
 </div>

@@ -8,7 +8,7 @@
         <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4 font-mono">🗑️ 删除文章</h2>
         <p class="text-slate-500 dark:text-slate-400 mb-2 font-light">确定要永久删除这篇文章吗？此操作无法撤销。</p>
         <p class="text-slate-900 dark:text-slate-100 text-lg font-bold mb-4">"{{ post.title }}"</p>
-        <p class="text-xs text-slate-400 dark:text-slate-600 font-mono mb-8">
+        <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-8">
             UUID: {{ post.unique_id }}<br>
             创建于 {{ post.created_time|date:"Y年n月j日" }}
         </p>
@@ -20,7 +20,7 @@
                 确认删除
             </button>
             <a href="{% url 'post_detail' username=post.author.username slug=post.slug %}"
-               class="px-6 py-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 rounded-xl hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm">
+               class="px-6 py-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 rounded-xl hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm">
                 取消
             </a>
         </form>

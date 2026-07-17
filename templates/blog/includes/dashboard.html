@@ -1,21 +1,21 @@
 {# 仪表盘统计条 — 登录后在首页可见 #}
 {% if dashboard %}
-<div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-xl p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
     <div class="text-center">
         <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400">{{ dashboard.total_posts }}</p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">总文章</p>
+        <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">总文章</p>
     </div>
     <div class="text-center">
         <p class="text-2xl font-bold text-green-600 dark:text-green-400">{{ dashboard.published_count }}</p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">已发布</p>
+        <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">已发布</p>
     </div>
     <div class="text-center">
         <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">{{ dashboard.draft_count }}</p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">草稿</p>
+        <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">草稿</p>
     </div>
     <div class="text-center">
         <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">{{ dashboard.total_views }}</p>
-        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">总浏览</p>
+        <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">总浏览</p>
     </div>
 </div>
 {% endif %}

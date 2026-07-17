@@ -1,0 +1,45 @@
+{# Series list content for user space tab. Expects: series_list, space_owner #}
+<div class="flex items-center justify-between mb-4">
+    <h2 class="text-sm font-mono text-slate-400 dark:text-slate-400">📚 文章系列</h2>
+    {% if user == space_owner %}
+    <a href="{% url 'series_create' %}"
+       class="px-3 py-1.5 bg-purple-100 dark:bg-purple-500/20 border border-purple-300 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 rounded-xl hover:bg-purple-200 dark:hover:bg-purple-500/30 transition font-mono text-xs">
+        + 新建系列
+    </a>
+    {% endif %}
+</div>
+
+{% if series_list %}
+<div class="space-y-4">
+    {% for s in series_list %}
+    <a href="{% url 'user_post_by_series' username=space_owner.username slug=s.slug %}"
+       class="block bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 hover:border-purple-400 dark:hover:border-purple-500/40 transition group">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{{ s.name }}</h3>
+                {% if s.description %}
+                <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">{{ s.description }}</p>
+                {% endif %}
+            </div>
+            <span class="text-xs font-mono text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-3 py-1 rounded-full">
+                {{ s.post_set.count }} 篇
+            </span>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center">
+    <p class="text-2xl mb-4">📚</p>
+    <p class="text-slate-500 dark:text-slate-400 font-mono text-sm mb-2 font-bold">还没有创建系列</p>
+    <p class="text-xs text-slate-400 dark:text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
+        系列可以帮助你将相关文章组织成连续的教程或连载，让读者按顺序阅读。
+    </p>
+    {% if user == space_owner %}
+    <a href="{% url 'series_create' %}"
+       class="inline-block px-5 py-2.5 bg-purple-100 dark:bg-purple-500/20 border border-purple-300 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 rounded-xl hover:bg-purple-200 dark:hover:bg-purple-500/30 transition font-mono text-sm">
+        ✨ 创建第一个系列
+    </a>
+    {% endif %}
+</div>
+{% endif %}

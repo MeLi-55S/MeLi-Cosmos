@@ -1,0 +1,89 @@
+{% extends "blog/base.html" %}
+
+{% block title %}{{ space_owner.username }} 的空间 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    {# Left: main content #}
+    <div class="lg:col-span-2 space-y-6">
+        {# User profile header #}
+        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg dark:shadow-2xl">
+            <div class="flex items-center gap-4">
+                <div class="relative flex-shrink-0">
+                    <div class="absolute inset-0 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full blur opacity-40"></div>
+                    <img src="{% if space_profile.avatar %}{{ space_profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ space_owner.username }}{% endif %}" alt="头像" class="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-full border-2 border-slate-200 dark:border-slate-700 relative z-10 object-cover">
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">@{{ space_owner.username }}</h1>
+                    {% if space_profile.title %}
+                    <p class="text-xs text-cyan-600 dark:text-cyan-400 font-mono mt-1">{{ space_profile.title }}</p>
+                    {% endif %}
+                    <p class="text-xs mt-2 line-clamp-2 {% if space_profile.bio %}text-slate-500 dark:text-slate-400{% else %}text-slate-400 dark:text-slate-400 italic{% endif %}">
+                        {% if space_profile.bio %}{{ space_profile.bio }}{% else %}这个人很懒，还没有填写个人简介……{% endif %}
+                    </p>
+                </div>
+            </div>
+
+            {% if user == space_owner %}
+            <div class="mt-3">
+                <a href="{% url 'profile_edit' %}" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">编辑资料</a>
+            </div>
+            {% endif %}
+
+            <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                {% if space_profile.website %}
+                <a href="{{ space_profile.website }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">🌐 网站</a>
+                {% endif %}
+                {% if space_profile.github %}
+                <a href="{{ space_profile.github }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">🐙 GitHub</a>
+                {% endif %}
+                {% if space_profile.mastodon %}
+                <a href="{{ space_profile.mastodon }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">🐘 Mastodon</a>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Navigation tabs #}
+        <div class="flex gap-4 text-xs font-mono">
+            <a href="{% url 'user_space' username=space_owner.username %}"
+               class="pb-1 border-b-2 transition {% if active_tab == 'posts' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">文章</a>
+            <a href="{% url 'user_archives' username=space_owner.username %}"
+               class="pb-1 border-b-2 transition {% if active_tab == 'archives' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">归档</a>
+            <a href="{% url 'user_series_list' username=space_owner.username %}"
+               class="pb-1 border-b-2 transition {% if active_tab == 'series' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">系列</a>
+            <a href="{% url 'user_memo_list' username=space_owner.username %}"
+               class="pb-1 border-b-2 transition {% if active_tab == 'memos' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">碎碎念</a>
+        </div>
+
+        {# Content area #}
+        {% include content_template %}
+    </div>
+
+    {# Right: stats sidebar #}
+    <div class="space-y-6">
+        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-lg dark:shadow-2xl">
+            <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-4">📊 统计</h3>
+            <div class="space-y-3 font-mono text-xs">
+                <div class="flex justify-between">
+                    <span class="text-slate-400 dark:text-slate-400">文章总数</span>
+                    <span class="text-slate-700 dark:text-slate-300">{{ space_stats.total_posts }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400 dark:text-slate-400">已发布</span>
+                    <span class="text-green-600 dark:text-green-400">{{ space_stats.published_count }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-slate-400 dark:text-slate-400">总浏览</span>
+                    <span class="text-cyan-600 dark:text-cyan-400">{{ space_stats.total_views }}</span>
+                </div>
+                {% if space_stats.latest_memo %}
+                <div class="pt-3 border-t border-slate-200 dark:border-slate-700 mt-3">
+                    <span class="text-slate-400 dark:text-slate-400 block mb-1">最新碎碎念</span>
+                    <p class="text-slate-500 dark:text-slate-400 leading-relaxed">{{ space_stats.latest_memo.content|truncatechars:100 }}</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

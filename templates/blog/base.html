@@ -18,7 +18,9 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}">
     <link rel="icon" type="image/svg+xml" href="{% static 'logo.svg' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'apple-touch-icon.png' %}">
     <title>{% block title %}MeLi Cosmos{% endblock %}</title>
 
     {# SEO Meta #}
@@ -43,7 +45,7 @@
         code, pre { font-family: 'JetBrains Mono', monospace; }
 
         /* Pygments Dark Theme - Monokai-inspired code highlighting */
-        html.dark .codehilite { background: #030712; border: 1px solid #1e293b; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; margin: 1rem 0; position: relative; }
+        html.dark .codehilite { background: #030712; border: 1px solid #334155; border-radius: 0.75rem; padding: 1.25rem; overflow-x: auto; margin: 1rem 0; position: relative; }
         html.dark .codehilite pre { margin: 0; background: transparent; padding-right: 3rem; }
         html.dark .codehilite .hll { background-color: #272822; }
         html.dark .codehilite .c { color: #6c7a89; font-style: italic; }
@@ -178,7 +180,7 @@
 
         /* Markdown content typography - Dark */
         html.dark .md-content h1 { font-size: 1.75rem; font-weight: 700; color: #f1f5f9; margin: 2rem 0 1rem; line-height: 1.3; }
-        html.dark .md-content h2 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin: 1.75rem 0 0.75rem; line-height: 1.35; padding-bottom: 0.5rem; border-bottom: 1px solid #1e293b; }
+        html.dark .md-content h2 { font-size: 1.4rem; font-weight: 700; color: #e2e8f0; margin: 1.75rem 0 0.75rem; line-height: 1.35; padding-bottom: 0.5rem; border-bottom: 1px solid #334155; }
         html.dark .md-content h3 { font-size: 1.15rem; font-weight: 600; color: #cbd5e1; margin: 1.5rem 0 0.5rem; line-height: 1.4; }
         html.dark .md-content h4, html.dark .md-content h5, html.dark .md-content h6 { font-size: 1rem; font-weight: 600; color: #94a3b8; margin: 1.25rem 0 0.5rem; }
         html.dark .md-content p { margin: 0.75rem 0; line-height: 1.8; }
@@ -188,10 +190,10 @@
         html.dark .md-content a { color: #22d3ee; text-decoration: underline; text-underline-offset: 2px; }
         html.dark .md-content a:hover { color: #67e8f9; }
         html.dark .md-content img { max-width: 100%; border-radius: 0.75rem; margin: 1rem 0; }
-        html.dark .md-content hr { border: 0; border-top: 1px solid #1e293b; margin: 2rem 0; }
+        html.dark .md-content hr { border: 0; border-top: 1px solid #334155; margin: 2rem 0; }
         html.dark .md-content table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.875rem; }
         html.dark .md-content th { background: #1e293b; padding: 0.5rem 0.75rem; text-align: left; font-weight: 600; color: #e2e8f0; border: 1px solid #334155; }
-        html.dark .md-content td { padding: 0.5rem 0.75rem; border: 1px solid #1e293b; }
+        html.dark .md-content td { padding: 0.5rem 0.75rem; border: 1px solid #334155; }
         html.dark .md-content code { background: #1e293b; padding: 0.15rem 0.4rem; border-radius: 0.25rem; font-size: 0.875em; color: #f1f5f9; }
         html.dark .md-content strong { color: #e2e8f0; font-weight: 600; }
         html.dark .md-content em { color: #cbd5e1; }

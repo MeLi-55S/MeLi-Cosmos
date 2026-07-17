@@ -12,7 +12,7 @@
         <img id="current-avatar"
              src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ user.username }}{% endif %}"
              alt="当前头像"
-             class="w-32 h-32 rounded-full object-cover border-2 border-slate-200 dark:border-slate-800">
+             class="w-32 h-32 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700">
     </div>
 
     {# Upload & crop area #}
@@ -28,7 +28,7 @@
                 保存头像
             </button>
             <button type="button" id="crop-cancel-btn"
-                    class="px-4 py-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm bg-transparent border-none cursor-pointer">
+                    class="px-4 py-2.5 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm bg-transparent border-none cursor-pointer">
                 取消
             </button>
         </div>
@@ -44,9 +44,9 @@
         </button>
     </div>
 
-    <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-900">
+    <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700">
         <a href="{% url 'profile_edit' %}"
-           class="text-xs font-mono text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition hover:underline">
+           class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition hover:underline">
             ← 返回编辑资料
         </a>
     </div>

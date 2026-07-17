@@ -27,7 +27,7 @@
 
         <div>
             <label for="{{ form.body.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">
-                正文 <span class="text-slate-400 dark:text-slate-600">（Markdown）</span>
+                正文 <span class="text-slate-400 dark:text-slate-400">（Markdown）</span>
             </label>
             {# Image upload toolbar #}
             <div class="flex items-center gap-3 mb-2">
@@ -38,7 +38,7 @@
                     </svg>
                     图片
                 </button>
-                <span class="text-xs text-slate-400 dark:text-slate-500">或 Ctrl+V / 拖拽图片到编辑区</span>
+                <span class="text-xs text-slate-400 dark:text-slate-400">或 Ctrl+V / 拖拽图片到编辑区</span>
                 <input type="file" id="image-file-input" accept="image/*" class="hidden">
                 <span id="image-upload-status" class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hidden"></span>
             </div>
@@ -67,7 +67,7 @@
                     <input type="text" id="new-category-name" placeholder="新分类名称"
                            class="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition">
                     <button type="button" id="new-category-confirm" class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
-                    <button type="button" id="new-category-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
+                    <button type="button" id="new-category-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
                 </div>
                 {% if form.category.errors %}
                 <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.category.errors.0 }}</p>
@@ -93,7 +93,7 @@
                        class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition">
                 <div class="flex gap-2">
                     <button type="button" id="new-series-confirm" class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
-                    <button type="button" id="new-series-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
+                    <button type="button" id="new-series-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
                 </div>
             </div>
         </div>
@@ -109,7 +109,7 @@
                    list="tag-datalist" autocomplete="off">
             {# Hidden input stores actual form value #}
             <input type="hidden" name="tag_names" id="tag-names-hidden" value="{{ form.tag_names.value|default:'' }}">
-            <p class="text-xs text-slate-400 dark:text-slate-600 mt-1 font-mono">输入标签名后按空格确认，点击 × 删除</p>
+            <p class="text-xs text-slate-400 dark:text-slate-400 mt-1 font-mono">输入标签名后按空格确认，点击 × 删除</p>
             {% if form.tag_names.errors %}
             <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.tag_names.errors.0 }}</p>
             {% endif %}
@@ -137,7 +137,7 @@
                 pills.innerHTML = tags.map(function(t, i) {
                     return '<span class="inline-flex items-center gap-1 px-2.5 py-1 bg-cyan-50 dark:bg-cyan-500/10 border border-cyan-200 dark:border-cyan-500/20 text-xs font-mono text-cyan-700 dark:text-cyan-300 rounded-full">' +
                         t +
-                        '<button type="button" data-idx="' + i + '" class="tag-remove text-slate-400 dark:text-slate-600 hover:text-red-600 dark:hover:text-red-400 transition leading-none text-sm">&times;</button>' +
+                        '<button type="button" data-idx="' + i + '" class="tag-remove text-slate-400 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition leading-none text-sm">&times;</button>' +
                         '</span>';
                 }).join('');
                 // Bind remove handlers
@@ -328,18 +328,18 @@
         </script>
 
         {% if form.instance.pk %}
-        <div class="text-xs font-mono text-slate-400 dark:text-slate-600">
+        <div class="text-xs font-mono text-slate-400 dark:text-slate-400">
             UUID: {{ form.instance.unique_id }}
         </div>
         {% endif %}
 
-        <div class="flex items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-900">
+        <div class="flex items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
             <button type="submit"
                     class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
                 {% if form.instance.pk %}保存修改{% else %}发布文章{% endif %}
             </button>
             <a href="{% if form.instance.pk %}{% url 'post_detail' username=form.instance.author.username slug=form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
-               class="px-4 py-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">
+               class="px-4 py-2.5 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">
                 取消
             </a>
         </div>

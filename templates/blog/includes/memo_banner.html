@@ -1,8 +1,8 @@
 {% if latest_memos %}
-<div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl p-4 backdrop-blur-md">
+<div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 backdrop-blur-md">
     <div class="flex items-center gap-2 mb-3">
         <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400 font-bold">最新碎碎念</span>
-        <span class="text-xs font-mono text-slate-400 dark:text-slate-500">（48小时内）</span>
+        <span class="text-xs font-mono text-slate-400 dark:text-slate-400">（48小时内）</span>
     </div>
     <div class="space-y-3">
         {% for memo in latest_memos %}
@@ -13,8 +13,8 @@
             <div class="text-xs font-mono min-w-0">
                 <a href="{% url 'user_space' username=memo.author.username %}"
                    class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 font-bold">@{{ memo.author.username }}</a>
-                <span class="text-slate-400 dark:text-slate-500 ml-1">{{ memo.content|truncatechars:80 }}</span>
-                <span class="text-slate-400 dark:text-slate-600 ml-2">{{ memo.created_time|date:"m-d H:i" }}</span>
+                <span class="text-slate-400 dark:text-slate-400 ml-1">{{ memo.content|truncatechars:80 }}</span>
+                <span class="text-slate-400 dark:text-slate-400 ml-2">{{ memo.created_time|date:"m-d H:i" }}</span>
             </div>
         </div>
         {% endfor %}

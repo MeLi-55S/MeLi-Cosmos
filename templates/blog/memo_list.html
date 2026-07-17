@@ -16,7 +16,7 @@
 
     <div class="space-y-4">
         {% for memo in memos %}
-        <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl p-4 flex items-start justify-between gap-4">
+        <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-start justify-between gap-4">
             <div class="flex items-start space-x-3 min-w-0">
                 <img src="{% if memo.author and memo.author.profile.avatar %}{{ memo.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={% if memo.author %}{{ memo.author.username }}{% else %}unknown{% endif %}{% endif %}" class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover" alt="" width="32" height="32">
                 <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words">
@@ -29,13 +29,13 @@
                     {{ memo.content }}
                 </p>
             </div>
-            <span class="text-xs text-slate-400 dark:text-slate-600 font-mono flex-shrink-0">{{ memo.created_time|date:"Y年n月j日 H:i" }}</span>
+            <span class="text-xs text-slate-400 dark:text-slate-400 font-mono flex-shrink-0">{{ memo.created_time|date:"Y年n月j日 H:i" }}</span>
         </div>
         {% empty %}
-        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-12 text-center">
+        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center">
             <p class="text-2xl mb-4">🛰️</p>
             <p class="text-slate-500 dark:text-slate-400 font-mono text-sm mb-2 font-bold">还没有碎碎念</p>
-            <p class="text-xs text-slate-400 dark:text-slate-600 mb-6 max-w-md mx-auto leading-relaxed">
+            <p class="text-xs text-slate-400 dark:text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
                 碎碎念是简短的状态更新，记录一闪而过的灵感和日常。
             </p>
             {% if user.is_authenticated %}
@@ -52,20 +52,20 @@
     <div class="flex items-center justify-center space-x-3 pt-8 font-mono text-sm">
         {% if page_obj.has_previous %}
         <a href="?page=1"
-           class="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-800 transition">首页</a>
+           class="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700 transition">首页</a>
         <a href="?page={{ page_obj.previous_page_number }}"
-           class="px-4 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/40 border border-slate-200 dark:border-slate-800 transition">
+           class="px-4 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/40 border border-slate-200 dark:border-slate-700 transition">
             &larr; 上一页
         </a>
         {% endif %}
-        <span class="text-slate-400 dark:text-slate-600">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
+        <span class="text-slate-400 dark:text-slate-400">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
         {% if page_obj.has_next %}
         <a href="?page={{ page_obj.next_page_number }}"
-           class="px-4 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/40 border border-slate-200 dark:border-slate-800 transition">
+           class="px-4 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:border-cyan-400 dark:hover:border-cyan-500/40 border border-slate-200 dark:border-slate-700 transition">
             下一页 &rarr;
         </a>
         <a href="?page={{ page_obj.paginator.num_pages }}"
-           class="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-800 transition">末页</a>
+           class="px-3 py-2 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700 transition">末页</a>
         {% endif %}
     </div>
     {% endif %}

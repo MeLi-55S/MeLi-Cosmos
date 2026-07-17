@@ -18,7 +18,7 @@
     <div class="space-y-4">
         {% for s in series_list %}
         <a href="{% url 'post_by_series' s.slug %}"
-           class="block bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-6 hover:border-purple-400 dark:hover:border-purple-500/40 transition group">
+           class="block bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 hover:border-purple-400 dark:hover:border-purple-500/40 transition group">
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition">{{ s.name }}</h2>
@@ -26,7 +26,7 @@
                     <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">{{ s.description }}</p>
                     {% endif %}
                 </div>
-                <span class="text-xs font-mono text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-900 px-3 py-1 rounded-full">
+                <span class="text-xs font-mono text-slate-400 dark:text-slate-400 bg-slate-100 dark:bg-slate-900 px-3 py-1 rounded-full">
                     {{ s.post_set.count }} 篇
                 </span>
             </div>
@@ -34,10 +34,10 @@
         {% endfor %}
     </div>
     {% else %}
-    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-12 text-center">
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center">
         <p class="text-2xl mb-4">📚</p>
         <p class="text-slate-500 dark:text-slate-400 font-mono text-sm mb-2 font-bold">还没有创建系列</p>
-        <p class="text-xs text-slate-400 dark:text-slate-600 mb-6 max-w-md mx-auto leading-relaxed">
+        <p class="text-xs text-slate-400 dark:text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
             系列可以帮助你将相关文章组织成连续的教程或连载，让读者按顺序阅读。
         </p>
         {% if user.is_authenticated %}

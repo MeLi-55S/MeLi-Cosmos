@@ -11,11 +11,11 @@
 <div class="max-w-4xl mx-auto">
 
     {# 返回导航 #}
-    <a href="{% url 'index' %}" class="mb-6 inline-flex items-center space-x-2 text-sm font-mono text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition cursor-pointer">
+    <a href="{% url 'index' %}" class="mb-6 inline-flex items-center space-x-2 text-sm font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition cursor-pointer">
         <span>&larr;</span> <span>返回首页</span>
     </a>
 
-    <article class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl shadow-lg dark:shadow-2xl overflow-hidden">
+    <article class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg dark:shadow-2xl overflow-hidden">
 
         {# 封面图片 #}
         {% if post.cover %}
@@ -25,13 +25,13 @@
         <div class="p-6 md:p-10">
 
         {# 文章头部 #}
-        <header class="mb-8 pb-6 border-b border-slate-200 dark:border-slate-900">
+        <header class="mb-8 pb-6 border-b border-slate-200 dark:border-slate-700">
             {% if post.series %}
             <div class="text-xs md:text-sm font-mono text-purple-600 dark:text-purple-400 mb-2 tracking-wider font-semibold">
                 <a href="{% url 'post_by_series' series_slug %}" class="hover:text-purple-700 dark:hover:text-purple-300 transition">
                     系列：{{ series_name }}
                 </a>
-                <span class="text-slate-400 dark:text-slate-600">（第 {{ series_index }} 篇 / 共 {{ series_total }} 篇）</span>
+                <span class="text-slate-400 dark:text-slate-400">（第 {{ series_index }} 篇 / 共 {{ series_total }} 篇）</span>
             </div>
             {% endif %}
             {% if post.category %}
@@ -54,7 +54,7 @@
             <h1 class="text-2xl md:text-4xl font-bold text-slate-900 dark:text-slate-100 leading-tight mb-4">
                 {{ post.title }}
             </h1>
-            <div class="flex flex-wrap gap-4 text-xs text-slate-400 dark:text-slate-500 font-mono">
+            <div class="flex flex-wrap gap-4 text-xs text-slate-400 dark:text-slate-400 font-mono">
                 <span>📅 发布于 {{ post.created_time|date:"Y年n月j日" }}</span>
                 <span>⏱️ 阅读时间 {{ read_time }} 分钟</span>
                 <span>👁️ 浏览 {{ post.views }} 次</span>
@@ -64,11 +64,11 @@
 
         {# 系列导航（上一篇/下一篇） #}
         {% if series_prev or series_next %}
-        <div class="flex justify-between items-center gap-4 mb-8 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl px-5 py-6 not-prose">
+        <div class="flex justify-between items-center gap-4 mb-8 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-6 not-prose">
             {% if series_prev %}
             <a href="{% url 'post_detail' username=series_prev.author.username slug=series_prev.slug %}"
                class="text-xs font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition flex-1 min-h-[48px] flex flex-col justify-center">
-                <span class="block text-slate-400 dark:text-slate-600">← 上一篇</span>
+                <span class="block text-slate-400 dark:text-slate-400">← 上一篇</span>
                 <span class="text-slate-700 dark:text-slate-300">{{ series_prev.title|truncatechars:30 }}</span>
             </a>
             {% else %}
@@ -77,7 +77,7 @@
             {% if series_next %}
             <a href="{% url 'post_detail' username=series_next.author.username slug=series_next.slug %}"
                class="text-xs font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition text-right flex-1 min-h-[48px] flex flex-col justify-center">
-                <span class="block text-slate-400 dark:text-slate-600">下一篇 →</span>
+                <span class="block text-slate-400 dark:text-slate-400">下一篇 →</span>
                 <span class="text-slate-700 dark:text-slate-300">{{ series_next.title|truncatechars:30 }}</span>
             </a>
             {% else %}
@@ -91,7 +91,7 @@
 
             {# TOC - 可折叠目录 #}
             {% if post.toc %}
-            <details class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl p-5 mb-6 not-prose">
+            <details class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-6 not-prose">
                 <summary class="text-sm font-mono text-cyan-600 dark:text-cyan-400 cursor-pointer select-none">📑 目录</summary>
                 <div class="mt-4 text-sm leading-relaxed toc-content">
                     {{ post.toc|safe }}
@@ -113,7 +113,7 @@
 
         {# 标签页脚 #}
         {% if post.tags.all %}
-        <div class="mt-10 pt-6 border-t border-slate-200 dark:border-slate-900">
+        <div class="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700">
             <div class="flex flex-wrap gap-2">
                 {% for tag in post.tags.all %}
                 <a href="{% url 'post_by_tag' tag.slug %}"
@@ -127,12 +127,12 @@
 
         {# 作者操作 #}
         {% if user.is_authenticated and user == post.author %}
-        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-900 flex gap-4 items-center">
+        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex gap-4 items-center">
             {% if post.status == 'draft' %}
             <form method="post" action="{% url 'post_publish' unique_id=post.unique_id %}" class="inline">
                 {% csrf_token %}
                 <button type="submit"
-                        class="text-xs font-mono text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition bg-transparent border-none cursor-pointer">
+                        class="text-xs font-mono text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition bg-transparent border-none cursor-pointer p-0">
                     🚀 发布
                 </button>
             </form>
@@ -152,8 +152,8 @@
     </article>
 
     {# 关于作者 #}
-    <section class="mt-10 pt-6 border-t border-slate-200 dark:border-slate-900">
-        <div class="flex items-start gap-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-900 rounded-xl p-5">
+    <section class="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700">
+        <div class="flex items-start gap-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
             <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username }}{% endif %}"
                  class="w-12 h-12 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover"
                  alt="{{ post.author.username }}" width="48" height="48">
@@ -178,13 +178,13 @@
     {# 相关文章 #}
     {% if related_posts %}
     <section class="mt-10">
-        <h3 class="text-sm font-mono text-slate-400 dark:text-slate-500 mb-4">相关文章</h3>
+        <h3 class="text-sm font-mono text-slate-400 dark:text-slate-400 mb-4">相关文章</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             {% for rp in related_posts %}
-            <a href="{% url 'post_detail' username=rp.author.username slug=rp.slug %}" class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-xl p-4 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition group">
+            <a href="{% url 'post_detail' username=rp.author.username slug=rp.slug %}" class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition group">
                 <div class="text-xs font-mono text-cyan-600 dark:text-cyan-400 mb-1">{{ rp.category.name|default:"" }}</div>
                 <h4 class="text-sm font-semibold text-slate-800 dark:text-slate-200 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition line-clamp-2">{{ rp.title }}</h4>
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">{{ rp.created_time|date:"Y年n月j日" }}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-400 mt-2">{{ rp.created_time|date:"Y年n月j日" }}</p>
             </a>
             {% endfor %}
         </div>

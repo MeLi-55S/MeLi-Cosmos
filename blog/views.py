@@ -30,7 +30,7 @@ from django.views.generic import (
 )
 
 from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm
-from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin
+from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin, UserSpaceMixin
 from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage
 
 
@@ -293,24 +293,20 @@ class MemoListView(ListView):
         return qs
 
 
-class UserMemoListView(ListView):
+class UserMemoListView(UserSpaceMixin, ListView):
     """Per-user memo list."""
     model = Memo
-    template_name = "blog/memo_list.html"
+    template_name = "blog/includes/user_layout.html"
     context_object_name = "memos"
     paginate_by = 20
+    active_tab = "memos"
+    content_template = "blog/includes/memo_list_content.html"
 
     def get_queryset(self):
-        self.memo_author = get_object_or_404(User, username=self.kwargs["username"])
-        qs = Memo.objects.filter(author=self.memo_author)
-        if self.memo_author != self.request.user:
+        qs = Memo.objects.filter(author=self.space_owner)
+        if self.space_owner != self.request.user:
             qs = qs.filter(is_public=True)
         return qs.select_related("author", "author__profile")
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context["memo_author"] = self.memo_author
-        return context
 
 
 class MemoCreateView(LoginRequiredMixin, CreateView):
@@ -333,16 +329,24 @@ class MemoCreateView(LoginRequiredMixin, CreateView):
 # Navigation Pages
 # ═══════════════════════════════════════════════════════════════════════════
 
-class ArchivesView(ListView):
+class ArchivesView(UserSpaceMixin, ListView):
     model = Post
     template_name = "blog/archives.html"
     context_object_name = "posts"
+    active_tab = "archives"
+    content_template = "blog/includes/archives_list.html"
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        if hasattr(self, "space_owner"):
+            self.template_name = "blog/includes/user_layout.html"
 
     def get_queryset(self):
         username = self.kwargs.get("username")
         qs = Post.objects.filter(status="published").select_related(
-            "category", "author"
-        ).only("title", "slug", "created_time", "category__name", "author__username")
+            "category", "author", "author__profile"
+        ).only("title", "slug", "created_time", "category__name",
+               "author__username", "author__profile__avatar")
         if username:
             qs = qs.filter(author__username=username)
         return qs
@@ -375,16 +379,23 @@ class SeriesCreateView(LoginRequiredMixin, CreateView):
         return reverse("user_series_list", kwargs={"username": self.request.user.username})
 
 
-class SeriesListView(ListView):
+class SeriesListView(UserSpaceMixin, ListView):
     model = Series
     template_name = "blog/series_list.html"
     context_object_name = "series_list"
+    active_tab = "series"
+    content_template = "blog/includes/series_list_content.html"
+
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
+        if hasattr(self, "space_owner"):
+            self.template_name = "blog/includes/user_layout.html"
 
     def get_queryset(self):
-        username = self.kwargs.get("username")
-        if username:
-            author = get_object_or_404(User, username=username)
-            return Series.objects.filter(author=author).prefetch_related("post_set")
+        if hasattr(self, "space_owner"):
+            return Series.objects.filter(
+                author=self.space_owner
+            ).prefetch_related("post_set")
         return Series.objects.prefetch_related("post_set").all()
 
     def get_context_data(self, **kwargs):
@@ -419,27 +430,29 @@ class PostByTagView(ListView):
         return context
 
 
-class PostBySeriesView(ListView):
+class PostBySeriesView(UserSpaceMixin, ListView):
     model = Post
     template_name = "blog/series_detail.html"
     context_object_name = "posts"
-    paginate_by = None  # Show all posts in TOC sidebar
+    paginate_by = None
+    active_tab = "series"
+    content_template = "blog/includes/series_reader_content.html"
 
-    def get_queryset(self):
-        username = self.kwargs.get("username")
+    def setup(self, request, *args, **kwargs):
+        super().setup(request, *args, **kwargs)
         slug = self.kwargs["slug"]
-
-        if username:
-            user = get_object_or_404(User, username=username)
-            self.series = get_object_or_404(Series, slug=slug, author=user)
-            self.series_owner = user
+        if hasattr(self, "space_owner"):
+            self.series = get_object_or_404(Series, slug=slug, author=self.space_owner)
+            self.series_owner = self.space_owner
+            self.template_name = "blog/includes/user_layout.html"
         else:
             self.series = get_object_or_404(Series, slug=slug)
             self.series_owner = self.series.author
 
         self.sort_order = self.request.GET.get("sort", "asc")
-        ordering = "created_time" if self.sort_order == "asc" else "-created_time"
 
+    def get_queryset(self):
+        ordering = "created_time" if self.sort_order == "asc" else "-created_time"
         return Post.objects.filter(
             status="published", series=self.series
         ).select_related("category", "author", "author__profile", "series").prefetch_related("tags").order_by(ordering)
@@ -510,40 +523,22 @@ class PostByCategoryView(ListView):
 # User Space
 # ═══════════════════════════════════════════════════════════════════════════
 
-class UserSpaceView(ListView):
+class UserSpaceView(UserSpaceMixin, ListView):
     """User profile / personal blog space at /@<username>/"""
     model = Post
-    template_name = "blog/user_space.html"
+    template_name = "blog/includes/user_layout.html"
     context_object_name = "posts"
     paginate_by = 10
+    active_tab = "posts"
+    content_template = "blog/includes/user_posts.html"
 
     def get_queryset(self):
-        self.space_owner = get_object_or_404(
-            User.objects.select_related("profile"), username=self.kwargs["username"]
-        )
         qs = Post.objects.filter(author=self.space_owner).select_related(
             "category", "author"
         ).prefetch_related("tags")
         if self.space_owner != self.request.user:
             qs = qs.filter(status="published")
         return qs
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        owner = self.space_owner
-        context["space_owner"] = owner
-        context["space_profile"] = owner.profile
-
-        # Stats for the space owner
-        context["space_stats"] = {
-            "total_posts": Post.objects.filter(author=owner).count(),
-            "published_count": Post.objects.filter(author=owner, status="published").count(),
-            "total_views": Post.objects.filter(
-                author=owner, status="published"
-            ).aggregate(total=Sum("views"))["total"] or 0,
-            "latest_memo": Memo.objects.filter(author=owner, is_public=True).first(),
-        }
-        return context
 
 
 # ═══════════════════════════════════════════════════════════════════════════

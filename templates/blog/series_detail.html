@@ -6,13 +6,13 @@
 <div class="flex flex-col lg:flex-row gap-8">
     {# Left sidebar: TOC #}
     <div class="lg:w-72 flex-shrink-0">
-        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-5 shadow-lg dark:shadow-2xl lg:sticky lg:top-20">
+        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-lg dark:shadow-2xl lg:sticky lg:top-20">
             <div class="mb-4">
                 <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">{{ series.name }}</h1>
                 {% if series.description %}
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-2 leading-relaxed">{{ series.description }}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-400 mt-2 leading-relaxed">{{ series.description }}</p>
                 {% endif %}
-                <div class="flex items-center gap-4 mt-3 text-xs text-slate-400 dark:text-slate-500">
+                <div class="flex items-center gap-4 mt-3 text-xs text-slate-400 dark:text-slate-400">
                     <span>{{ series_posts|length }} 篇文章</span>
                     <a href="{% url 'user_space' username=series_owner.username %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300">@{{ series_owner.username }}</a>
                 </div>
@@ -20,8 +20,8 @@
 
             {# Sort toggle #}
             <div class="flex items-center gap-2 mb-3">
-                <button id="sort-asc" class="px-2 py-1 text-xs font-mono rounded {% if sort_order == 'asc' %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}text-slate-400 dark:text-slate-500{% endif %} transition bg-transparent border-none cursor-pointer">正序</button>
-                <button id="sort-desc" class="px-2 py-1 text-xs font-mono rounded {% if sort_order == 'desc' %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}text-slate-400 dark:text-slate-500{% endif %} transition bg-transparent border-none cursor-pointer">倒序</button>
+                <button id="sort-asc" class="px-2 py-1 text-xs font-mono rounded {% if sort_order == 'asc' %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}text-slate-400 dark:text-slate-400{% endif %} transition bg-transparent border-none cursor-pointer">正序</button>
+                <button id="sort-desc" class="px-2 py-1 text-xs font-mono rounded {% if sort_order == 'desc' %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400{% else %}text-slate-400 dark:text-slate-400{% endif %} transition bg-transparent border-none cursor-pointer">倒序</button>
             </div>
 
             {# Post list #}
@@ -29,7 +29,7 @@
                 {% for sp in series_posts %}
                 <a href="?post={{ sp.slug }}"
                    class="block px-3 py-2 rounded-lg text-xs font-mono transition {% if sp == current_post %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-bold{% else %}text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-50 dark:hover:bg-slate-950/40{% endif %}">
-                    <span class="text-slate-400 dark:text-slate-600 mr-2">{{ forloop.counter }}</span>
+                    <span class="text-slate-400 dark:text-slate-400 mr-2">{{ forloop.counter }}</span>
                     {{ sp.title|truncatechars:20 }}
                 </a>
                 {% endfor %}
@@ -40,9 +40,9 @@
     {# Right: content #}
     <div class="flex-1 min-w-0">
         {% if current_post %}
-        <article class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-6 md:p-10 shadow-lg dark:shadow-2xl">
+        <article class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 md:p-10 shadow-lg dark:shadow-2xl">
             <div class="flex items-center justify-between mb-4">
-                <div class="text-xs font-mono text-slate-400 dark:text-slate-500">
+                <div class="text-xs font-mono text-slate-400 dark:text-slate-400">
                     第 {{ current_index }} 篇 / 共 {{ series_posts|length }} 篇
                 </div>
                 <a href="{% url 'post_detail' username=current_post.author.username slug=current_post.slug %}"
@@ -51,20 +51,20 @@
                 </a>
             </div>
 
-            <header class="mb-6 pb-4 border-b border-slate-200 dark:border-slate-900">
+            <header class="mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
                 <div class="flex items-center gap-2 mb-2">
                     <img src="{% if current_post.author.profile.avatar %}{{ current_post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ current_post.author.username }}{% endif %}"
                          class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 object-cover"
                          alt="" width="20" height="20">
                     <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400">@{{ current_post.author.username }}</span>
                     {% if current_post.category %}
-                    <span class="text-xs font-mono text-slate-400 dark:text-slate-500">{{ current_post.category.name }}</span>
+                    <span class="text-xs font-mono text-slate-400 dark:text-slate-400">{{ current_post.category.name }}</span>
                     {% endif %}
                 </div>
                 <h2 class="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100 leading-snug">
                     {{ current_post.title }}
                 </h2>
-                <div class="flex flex-wrap gap-3 text-xs text-slate-400 dark:text-slate-500 font-mono mt-3">
+                <div class="flex flex-wrap gap-3 text-xs text-slate-400 dark:text-slate-400 font-mono mt-3">
                     <span>{{ current_post.created_time|date:"Y年n月j日" }}</span>
                     <span>{{ current_post.body|length }} 字</span>
                 </div>
@@ -76,7 +76,7 @@
 
             {# Tags #}
             {% if current_post.tags.all %}
-            <div class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-900">
+            <div class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-700">
                 <div class="flex flex-wrap gap-2">
                     {% for tag in current_post.tags.all %}
                     <span class="px-2.5 py-1 bg-slate-100 dark:bg-slate-900 text-xs font-mono text-slate-500 dark:text-slate-400 rounded">#{{ tag.name }}</span>
@@ -90,8 +90,8 @@
         <div class="flex justify-between items-center mt-6 gap-4">
             {% if prev_post %}
             <a href="?post={{ prev_post.slug }}"
-               class="flex-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-xl px-5 py-4 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition">
-                <span class="block text-xs font-mono text-slate-400 dark:text-slate-500">&larr; 上一篇</span>
+               class="flex-1 bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-4 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition">
+                <span class="block text-xs font-mono text-slate-400 dark:text-slate-400">&larr; 上一篇</span>
                 <span class="block text-sm text-slate-700 dark:text-slate-300 mt-1">{{ prev_post.title|truncatechars:30 }}</span>
             </a>
             {% else %}
@@ -99,8 +99,8 @@
             {% endif %}
             {% if next_post %}
             <a href="?post={{ next_post.slug }}"
-               class="flex-1 text-right bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-xl px-5 py-4 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition">
-                <span class="block text-xs font-mono text-slate-400 dark:text-slate-500">下一篇 &rarr;</span>
+               class="flex-1 text-right bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl px-5 py-4 hover:border-cyan-400 dark:hover:border-cyan-500/40 transition">
+                <span class="block text-xs font-mono text-slate-400 dark:text-slate-400">下一篇 &rarr;</span>
                 <span class="block text-sm text-slate-700 dark:text-slate-300 mt-1">{{ next_post.title|truncatechars:30 }}</span>
             </a>
             {% else %}
@@ -109,7 +109,7 @@
         </div>
 
         {% else %}
-        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-900 rounded-2xl p-12 text-center">
+        <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center">
             <p class="text-slate-500 dark:text-slate-400 font-mono text-sm">该系列暂无文章。</p>
         </div>
         {% endif %}
