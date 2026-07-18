@@ -54,6 +54,7 @@ urlpatterns = [
     path("@<str:username>/series/<uslug:slug>/", views.PostBySeriesView.as_view(), name="user_post_by_series"),
     path("@<str:username>/series/", views.SeriesListView.as_view(), name="user_series_list"),
     path("@<str:username>/archives/", views.ArchivesView.as_view(), name="user_archives"),
+    path("@<str:username>/drafts/", views.DraftsView.as_view(), name="user_drafts"),
     path("@<str:username>/memos/", views.UserMemoListView.as_view(), name="user_memo_list"),
     path("@<str:username>/feed/", UserPostsFeed(), name="user_rss_feed"),
 

@@ -51,6 +51,10 @@
                class="pb-1 border-b-2 transition {% if active_tab == 'archives' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">归档</a>
             <a href="{% url 'user_series_list' username=space_owner.username %}"
                class="pb-1 border-b-2 transition {% if active_tab == 'series' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">系列</a>
+            {% if user == space_owner %}
+            <a href="{% url 'user_drafts' username=space_owner.username %}"
+               class="pb-1 border-b-2 transition {% if active_tab == 'drafts' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">草稿</a>
+            {% endif %}
             <a href="{% url 'user_memo_list' username=space_owner.username %}"
                class="pb-1 border-b-2 transition {% if active_tab == 'memos' %}text-cyan-600 dark:text-cyan-400 border-cyan-600 dark:border-cyan-400{% else %}text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 border-transparent{% endif %}">碎碎念</a>
         </div>

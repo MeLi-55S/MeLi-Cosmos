@@ -139,7 +139,8 @@ class PostDetailView(DetailView):
         )
         md = md_lib.Markdown(extensions=md_extensions)
         post.body_html = md.convert(post.body)
-        post.toc = md.toc
+        toc = md.toc
+        post.toc = toc if '<li>' in toc else ''
 
         char_count = len(post.body)
         read_time = max(1, round(char_count / 1000))
@@ -436,8 +437,15 @@ class PostByTagView(ListView):
         if username:
             user = get_object_or_404(User, username=username)
             self.tag = get_object_or_404(Tag, slug=slug, author=user)
+            self.tag_name = self.tag.name
         else:
-            self.tag = get_object_or_404(Tag, slug=slug)
+            tags = Tag.objects.filter(slug=slug)
+            if not tags.exists():
+                raise Http404("No Tag matches the given query.")
+            self.tag_name = tags.first().name
+            return Post.objects.filter(
+                status="published", tags__in=tags
+            ).select_related("category", "author", "author__profile").prefetch_related("tags").distinct()
 
         return Post.objects.filter(
             status="published", tags=self.tag
@@ -445,7 +453,7 @@ class PostByTagView(ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["active_filter"] = f"标签：{self.tag.name}"
+        context["active_filter"] = f"标签：{self.tag_name}"
         return context
 
 
@@ -558,6 +566,21 @@ class UserSpaceView(UserSpaceMixin, ListView):
         if self.space_owner != self.request.user:
             qs = qs.filter(status="published")
         return qs
+
+
+class DraftsView(UserSpaceMixin, ListView):
+    """Show draft posts for the space owner (owner only)."""
+    model = Post
+    template_name = "blog/includes/user_layout.html"
+    context_object_name = "posts"
+    paginate_by = 10
+    active_tab = "drafts"
+    content_template = "blog/includes/user_posts.html"
+
+    def get_queryset(self):
+        return Post.objects.filter(
+            author=self.space_owner, status="draft"
+        ).select_related("category", "author").prefetch_related("tags")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
