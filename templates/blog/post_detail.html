@@ -55,7 +55,11 @@
                 {{ post.title }}
             </h1>
             <div class="flex flex-wrap gap-4 text-xs text-slate-400 dark:text-slate-400 font-mono">
+                {% if post.modified_time|date:"U" > post.created_time|date:"U" %}
+                <span>📝 修改于 {{ post.modified_time|date:"Y年n月j日 H:i" }}</span>
+                {% else %}
                 <span>📅 发布于 {{ post.created_time|date:"Y年n月j日" }}</span>
+                {% endif %}
                 <span>⏱️ 阅读时间 {{ read_time }} 分钟</span>
                 <span>👁️ 浏览 <span data-view-count>{{ post.views }}</span> 次</span>
                 <span>🔑 UUID: {{ post.unique_id|truncatechars:24 }}</span>
@@ -125,30 +129,43 @@
         </div>
         {% endif %}
 
-        {# CC License #}
-        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2">
-            <span>CC BY-NC 4.0</span>
-            <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-非商业性使用 4.0 国际</a>
-        </div>
+        {# License #}
+        {% with post.license|default:"CC BY-NC 4.0" as lic %}
+        {% if lic == 'CC BY 4.0' %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC BY 4.0</span><a href="https://creativecommons.org/licenses/by/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名 4.0 国际</a></div>
+        {% elif lic == 'CC BY-SA 4.0' %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC BY-SA 4.0</span><a href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-相同方式共享 4.0 国际</a></div>
+        {% elif lic == 'CC BY-NC-SA 4.0' %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC BY-NC-SA 4.0</span><a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-非商业-相同方式共享 4.0 国际</a></div>
+        {% elif lic == 'CC BY-ND 4.0' %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC BY-ND 4.0</span><a href="https://creativecommons.org/licenses/by-nd/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-禁止演绎 4.0 国际</a></div>
+        {% elif lic == 'CC BY-NC-ND 4.0' %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC BY-NC-ND 4.0</span><a href="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-非商业-禁止演绎 4.0 国际</a></div>
+        {% elif lic == 'CC0' %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC0</span><a href="https://creativecommons.org/publicdomain/zero/1.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">公共领域</a></div>
+        {% else %}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2"><span>CC BY-NC 4.0</span><a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-非商业性使用 4.0 国际</a></div>
+        {% endif %}
+        {% endwith %}
 
         {# 作者操作 #}
         {% if user.is_authenticated and user == post.author %}
-        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex gap-4 items-center">
+        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex gap-4 items-center text-xs font-mono">
             {% if post.status == 'draft' %}
-            <form method="post" action="{% url 'post_publish' unique_id=post.unique_id %}" class="inline">
+            <form method="post" action="{% url 'post_publish' unique_id=post.unique_id %}" class="inline m-0 leading-none">
                 {% csrf_token %}
                 <button type="submit"
-                        class="text-xs font-mono text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition bg-transparent border-none cursor-pointer p-0">
+                        class="text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition bg-transparent border-none cursor-pointer p-0 font-mono text-xs leading-none">
                     🚀 发布
                 </button>
             </form>
             {% endif %}
             <a href="{% url 'post_edit' unique_id=post.unique_id %}"
-               class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">
+               class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition leading-none">
                 ✏️ 编辑
             </a>
             <a href="{% url 'post_delete' unique_id=post.unique_id %}"
-               class="text-xs font-mono text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition">
+               class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition leading-none">
                 🗑️ 删除
             </a>
         </div>

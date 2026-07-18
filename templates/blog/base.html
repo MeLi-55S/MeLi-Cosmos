@@ -424,14 +424,22 @@
             '</div>' +
             '<p id="ext-link-url" class="text-xs text-slate-400 dark:text-slate-400 break-all font-mono leading-relaxed"></p>' +
             '</div>' +
-            '{# Status area — fixed height to prevent layout shift #}' +
-            '<div style="min-height:56px">' +
-            '<div id="ext-link-checking" class="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" style="visibility:hidden">' +
+            '{# Status area — fixed height, absolutely positioned states for smooth crossfade #}' +
+            '<div class="relative" style="min-height:56px">' +
+            '<div id="ext-link-checking" class="status-state flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">' +
             '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
             '<span>正在检查链接安全性...</span>' +
             '</div>' +
-            '<div id="ext-link-warning" class="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-sm text-red-700 dark:text-red-400 leading-relaxed" style="visibility:hidden"></div>' +
+            '<div id="ext-link-safe" class="status-state flex items-center gap-2 text-sm text-green-600 dark:text-green-400">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>' +
+            '<span>暂无已知威胁</span>' +
             '</div>' +
+            '<div id="ext-link-warning" class="status-state flex items-start gap-2 p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-sm text-red-700 dark:text-red-400 leading-relaxed"></div>' +
+            '</div>' +
+            '<style>' +
+            '.status-state { position: absolute; inset: 0; opacity: 0; pointer-events: none; transition: opacity 0.25s; }' +
+            '.status-state.active { opacity: 1; pointer-events: auto; }' +
+            '</style>' +
             '{# Buttons #}' +
             '<div class="flex gap-3 justify-end mt-5">' +
             '<button id="ext-link-cancel" class="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition font-mono text-sm min-h-[48px]">取消</button>' +
@@ -446,17 +454,20 @@
         var previewEl = document.getElementById('ext-link-preview');
         var warningEl = document.getElementById('ext-link-warning');
         var checkingEl = document.getElementById('ext-link-checking');
+        var safeEl = document.getElementById('ext-link-safe');
         var goBtn = document.getElementById('ext-link-go');
         var cancelBtn = document.getElementById('ext-link-cancel');
 
-        function show(key, visible) { key.style.visibility = visible ? 'visible' : 'hidden'; }
+        function activate(el) {
+            [checkingEl, safeEl, warningEl].forEach(function(e) { e.classList.remove('active'); });
+            el.classList.add('active');
+        }
 
         function showModal(url) {
             var u = new URL(url);
             previewEl.textContent = u.hostname + u.pathname;
             urlEl.textContent = url;
-            show(warningEl, false);
-            show(checkingEl, true);
+            activate(checkingEl);
             goBtn.href = url;
             modal.classList.remove('hidden');
             checkSafeBrowsing(url);
@@ -470,15 +481,16 @@
             })
             .then(function(r) { return r.ok ? r.json() : {safe: true}; })
             .then(function(data) {
-                show(checkingEl, false);
                 if (!data.safe && data.threats && data.threats.length > 0) {
                     var labels = {'MALWARE': '恶意软件', 'SOCIAL_ENGINEERING': '钓鱼/社交工程攻击', 'UNWANTED_SOFTWARE': '潜在有害软件'};
                     var types = data.threats.map(function(t) { return labels[t] || t; }).join('、');
-                    warningEl.innerHTML = '<div class="flex items-start gap-2"><span class="text-base flex-shrink-0">&#9888;</span><span>Google 安全浏览检测到风险：<strong>' + types + '</strong><br>强烈建议不要继续访问。</span></div>';
-                    show(warningEl, true);
+                    warningEl.innerHTML = '<span class="text-base flex-shrink-0">&#9888;</span><span>Google 安全浏览检测到风险：<strong>' + types + '</strong><br>强烈建议不要继续访问。</span>';
+                    activate(warningEl);
+                } else {
+                    activate(safeEl);
                 }
             })
-            .catch(function() { show(checkingEl, false); });
+            .catch(function() { activate(safeEl); });
         }
 
         cancelBtn.addEventListener('click', function() { modal.classList.add('hidden'); });

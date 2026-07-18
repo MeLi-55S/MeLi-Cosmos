@@ -92,6 +92,16 @@ class Post(models.Model):
     series = models.ForeignKey("Series", on_delete=models.SET_NULL, null=True, blank=True, verbose_name='所属系列')
     series_order = models.PositiveSmallIntegerField('系列序号', default=1)
 
+    LICENSE_CHOICES = (
+        ('CC BY-NC 4.0', 'CC BY-NC 4.0（署名-非商业性使用）'),
+        ('CC BY 4.0', 'CC BY 4.0（署名）'),
+        ('CC BY-SA 4.0', 'CC BY-SA 4.0（署名-相同方式共享）'),
+        ('CC BY-NC-SA 4.0', 'CC BY-NC-SA 4.0（署名-非商业-相同方式共享）'),
+        ('CC BY-ND 4.0', 'CC BY-ND 4.0（署名-禁止演绎）'),
+        ('CC BY-NC-ND 4.0', 'CC BY-NC-ND 4.0（署名-非商业-禁止演绎）'),
+        ('CC0', 'CC0（公共领域）'),
+    )
+    license = models.CharField('许可协议', max_length=30, choices=LICENSE_CHOICES, default='CC BY-NC 4.0')
     status = models.CharField('文章状态', max_length=10, choices=STATUS_CHOICES, default='published')
     created_time = models.DateTimeField('创建时间', default=timezone.now)
     modified_time = models.DateTimeField('修改时间', auto_now=True)
@@ -100,14 +110,14 @@ class Post(models.Model):
     class Meta:
         verbose_name = '文章'
         verbose_name_plural = verbose_name
-        ordering = ['-created_time']
+        ordering = ['-modified_time']
         constraints = [
             models.UniqueConstraint(fields=['slug', 'author'], name='unique_post_per_author'),
         ]
         indexes = [
             models.Index(fields=['author', 'slug']),
-            models.Index(fields=['author', 'status', '-created_time']),
-            models.Index(fields=['status', '-created_time']),
+            models.Index(fields=['author', 'status', '-modified_time']),
+            models.Index(fields=['status', '-modified_time']),
         ]
 
     def __str__(self):

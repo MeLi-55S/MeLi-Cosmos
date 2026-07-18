@@ -99,6 +99,14 @@
         </div>
 
         <div>
+            <label for="{{ form.license.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">许可协议</label>
+            {{ form.license }}
+            {% if form.license.errors %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.license.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div>
             <label class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">标签</label>
             {# Tag pill container #}
             <div id="tag-pills" class="flex flex-wrap gap-1.5 mb-2 min-h-[1.5rem]"></div>

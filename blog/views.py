@@ -48,7 +48,7 @@ def _get_related_posts(post, max_results=3):
         status="published"
     ).exclude(pk=post.pk).select_related(
         "category", "author", "author__profile"
-    ).prefetch_related("tags").order_by("-created_time")[:50]
+    ).prefetch_related("tags").order_by("-modified_time")[:50]
 
     current_category = post.category
     current_tag_ids = {t.id for t in post.tags.all()}
@@ -142,7 +142,7 @@ class IndexView(ListView):
         if self.request.user.is_authenticated:
             return qs.filter(
                 Q(status="published") | Q(author=self.request.user)
-            ).order_by("-created_time")
+            ).order_by("-modified_time")
         return qs.filter(status="published")
 
     def get_context_data(self, **kwargs):
@@ -372,7 +372,8 @@ class PostPublishView(LoginRequiredMixin, AuthorRequiredMixin, DetailView):
     def post(self, request, *args, **kwargs):
         post = self.get_object()
         post.status = "published"
-        post.save(update_fields=["status"])
+        post.created_time = timezone.now()
+        post.save(update_fields=["status", "created_time"])
         return redirect(reverse("post_detail", kwargs={
             "username": post.author.username,
             "slug": post.slug,
@@ -1125,9 +1126,23 @@ def check_url_ajax(request):
             headers={"Content-Type": "application/json"},
         )
         with urlopen(req, timeout=3) as resp:
-            result = json.loads(resp.read())
-    except (URLError, TimeoutError, json.JSONDecodeError):
-        return JsonResponse({"safe": True, "reason": "api-error"})
+            raw = resp.read()
+            status = resp.status
+    except Exception as exc:
+        import logging
+        logging.getLogger("melicosmos").warning("Safe Browsing network error: %s", exc)
+        return JsonResponse({"safe": True, "reason": "api-error", "detail": str(exc)[:200]})
+
+    try:
+        result = json.loads(raw)
+    except json.JSONDecodeError:
+        return JsonResponse({"safe": True, "reason": "api-error", "detail": "Invalid JSON response"})
+
+    if status != 200 or "error" in result:
+        err = result.get("error", {}).get("message", f"HTTP {status}")
+        import logging
+        logging.getLogger("melicosmos").warning("Safe Browsing API error: %s", err)
+        return JsonResponse({"safe": True, "reason": "api-error", "detail": err[:200]})
 
     threats = result.get("matches", [])
     threat_types = [m.get("threatType", "") for m in threats]
@@ -1196,7 +1211,7 @@ def like_toggle_ajax(request):
     else:
         top_users = Like.objects.filter(
             content_type=ct, object_id=object_id
-        ).select_related("user__profile").order_by("-created_time")[:2]
+        ).select_related("user__profile").order_by("-modified_time")[:2]
         names = [
             u.user.profile.display_name or u.user.username
             for u in top_users

@@ -15,7 +15,7 @@ class LatestPostsFeed(Feed):
     description = "MeLi Cosmos 最新文章，一个极简主义多用户博客平台。"
 
     def items(self):
-        return Post.objects.filter(status="published").order_by("-created_time")[:20]
+        return Post.objects.filter(status="published").order_by("-modified_time")[:20]
 
     def item_title(self, item):
         return item.title
@@ -51,7 +51,7 @@ class UserPostsFeed(Feed):
     def items(self, obj):
         return Post.objects.filter(
             author=obj, status="published"
-        ).order_by("-created_time")[:20]
+        ).order_by("-modified_time")[:20]
 
     def item_title(self, item):
         return item.title
