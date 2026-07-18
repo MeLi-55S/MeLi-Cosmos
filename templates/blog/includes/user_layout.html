@@ -38,8 +38,8 @@
                 </a>
                 {% endif %}
                 {% if space_profile.github %}
-                <a href="{{ space_profile.github }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">
-                  <img src="{% static 'icons/github.svg' %}" class="inline-block w-4 h-4 align-text-bottom" alt=""> GitHub
+                <a href="{{ space_profile.github }}" target="_blank" rel="noopener noreferrer" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                  <img src="{% static 'icons/github.svg' %}" class="inline-block w-4 h-4 align-text-bottom" alt=""> @{{ space_profile.github_username }}
                 </a>
                 {% endif %}
                 {% if space_owner.email %}

@@ -8,6 +8,7 @@ dependencies = [
     "django>=6.0.6",
     "gunicorn>=26.0.0",
     "markdown>=3.7",
+    "nh3>=0.3.6",
     "pillow>=12.3.0",
     "pygments>=2.19",
     "python-dotenv>=1.2.2",

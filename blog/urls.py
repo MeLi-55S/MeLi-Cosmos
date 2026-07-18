@@ -29,6 +29,8 @@ urlpatterns = [
     path("search/", views.SearchView.as_view(), name="search"),
     path("about/", views.AboutView.as_view(), name="about"),
     path("rss/", views.RssGuideView.as_view(), name="rss_guide"),
+    path("terms/", views.TermsView.as_view(), name="terms"),
+    path("privacy/", views.PrivacyView.as_view(), name="privacy"),
 
     # ── Ban Appeal ─────────────────────────────────────────────────
     path("accounts/appeal/", views.BanAppealView.as_view(), name="ban_appeal"),
@@ -71,6 +73,9 @@ urlpatterns = [
 
     # ── Comments ────────────────────────────────────────────────────
     path("comment/create/", views.comment_create, name="comment_create"),
+
+    # ── Safe Browsing ────────────────────────────────────────────────
+    path("ajax/check-url/", views.check_url_ajax, name="check_url_ajax"),
 
     # ── AJAX helpers ─────────────────────────────────────────────────
     path("ajax/like/toggle/", views.like_toggle_ajax, name="like_toggle_ajax"),

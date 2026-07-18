@@ -131,6 +131,9 @@ USE_X_FORWARDED_PORT = True
 VIEW_LOG_COOLDOWN_HOURS = 1   # 同一指纹+IP 多久后可重新计数
 VIEW_LOG_RETENTION_DAYS = 90  # 日志保留天数
 
+# Google Safe Browsing (optional, leave empty to disable)
+GOOGLE_SAFE_BROWSING_KEY = os.getenv("GOOGLE_SAFE_BROWSING_KEY", "")
+
 # Markdown rendering configuration
 MARKDOWN_EXTENSIONS = [
     "extra",

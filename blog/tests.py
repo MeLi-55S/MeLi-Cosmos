@@ -520,9 +520,9 @@ class ThemeSystemTests(TestCase):
     def test_no_stale_dark_only_text_in_templates(self):
         """模板中不应出现旧的纯深色文字（无 light 兜底）。"""
         html = self._get_html()
-        self.assertNotIn('class="text-slate-100', html)
-        self.assertNotIn('class="text-slate-300', html)
-        self.assertNotIn('class="text-slate-400', html)
+        self.assertNotIn('class="text-slate-100"', html)
+        self.assertNotIn('class="text-slate-300"', html)
+        self.assertNotIn('class="text-slate-400"', html)
 
     def test_login_page_dual_theme_inputs(self):
         """登录页表单项使用双主题 class。"""

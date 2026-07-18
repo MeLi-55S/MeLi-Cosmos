@@ -1,0 +1,48 @@
+{% extends "blog/base.html" %}
+
+{% block title %}隐私政策 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">🔒 隐私政策</h1>
+
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 md:p-8 shadow-lg dark:shadow-2xl space-y-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-light">
+
+        <p><strong>生效日期：</strong>2026 年 7 月 18 日</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">我们收集的信息</h2>
+        <ul class="space-y-2 ml-4">
+            <li><strong>账号信息：</strong>用户名、邮箱（可选）、显示名称（可选）、个人简介（可选），以及你主动填写的个人网站/GitHub 链接。</li>
+            <li><strong>发布内容：</strong>文章、评论、碎碎念及你上传的图片。</li>
+            <li><strong>技术数据：</strong>IP 地址哈希值（不可逆，仅用于浏览计数去重）、浏览器指纹哈希值、User-Agent、访问时间。</li>
+            <li><strong>Cookie：</strong>用于保持登录会话和记住主题偏好，不含跟踪或广告标识符。</li>
+        </ul>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">信息用途</h2>
+        <ul class="space-y-2 ml-4">
+            <li>提供博客发布、评论、点赞等核心功能。</li>
+            <li>浏览计数去重（IP 哈希 + 浏览器指纹哈希），不追踪个人。</li>
+            <li>检测和防御滥用行为。</li>
+        </ul>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">信息存储与安全</h2>
+        <p>你的个人数据存储于服务器本地数据库中。IP 地址以 SHA-256 哈希形式存储，不可反向追溯。我们不会将你的数据出售、出租或与第三方共享。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">第三方服务</h2>
+        <ul class="space-y-2 ml-4">
+            <li><strong>DiceBear：</strong>未设置头像时使用 DiceBear API 生成默认头像（仅传入用户名作为 seed）。</li>
+            <li><strong>Cloudflare（可选）：</strong>生产环境可能通过 Cloudflare 提供 CDN 加速，Cloudflare 会收集访问日志以提供安全和性能服务。</li>
+        </ul>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">你的权利</h2>
+        <p>你可以随时编辑或删除你的个人资料和发布内容。如需彻底删除账号和所有关联数据，请通过下方邮箱联系我们。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">修订</h2>
+        <p>本政策可能随时更新，更新后将在本页面公示。</p>
+
+        <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-400 font-mono">
+            如有隐私相关问题请联系：<a href="mailto:melichem8@gmail.com" class="text-cyan-600 dark:text-cyan-400 hover:underline">melichem8@gmail.com</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

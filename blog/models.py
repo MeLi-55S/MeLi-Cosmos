@@ -192,6 +192,15 @@ class UserProfile(models.Model):
     def avatar_seed(self):
         return self.user.username
 
+    @property
+    def github_username(self):
+        if not self.github:
+            return ""
+        try:
+            return self.github.rstrip('/').split('/')[-1]
+        except (IndexError, AttributeError):
+            return ""
+
 
 class InviteCode(models.Model):
     code = models.CharField('邀请码', max_length=32, unique=True)

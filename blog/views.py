@@ -6,7 +6,7 @@ from collections import OrderedDict
 from datetime import date, timedelta
 
 import hashlib
-import html as html_mod
+import nh3
 from io import BytesIO
 
 import markdown as md_lib
@@ -84,6 +84,43 @@ def _format_like_display(names, count):
     if count <= 2:
         return "、".join(names) + " 赞了"
     return f"{names[0]}、{names[1]}等{count}人赞了"
+
+
+# Markdown rendering
+_ALLOWED_MD_TAGS = frozenset({
+    "h1", "h2", "h3", "h4", "h5", "h6",
+    "p", "br", "hr", "a", "img", "em", "strong", "code", "pre",
+    "div", "span", "ul", "ol", "li", "blockquote",
+    "table", "thead", "tbody", "tr", "th", "td",
+    "del", "sup", "sub", "dl", "dt", "dd",
+})
+
+_ALLOWED_MD_ATTRS = {tag: {"class", "id"} for tag in _ALLOWED_MD_TAGS}
+_ALLOWED_MD_ATTRS["a"].update({"href", "title"})
+_ALLOWED_MD_ATTRS["img"].update({"src", "alt", "title"})
+# tags which don't have useful id/class attributes
+for _tag in ("br", "hr", "em", "strong", "del", "sup", "sub", "li", "ul", "ol", "blockquote"):
+    _ALLOWED_MD_ATTRS[_tag] = set()
+
+
+def _sanitize_html(html):
+    """Sanitize rendered Markdown HTML to prevent XSS."""
+    return nh3.clean(
+        html,
+        tags=_ALLOWED_MD_TAGS,
+        attributes=_ALLOWED_MD_ATTRS,
+        url_schemes={"http", "https", "mailto"},
+    )
+
+
+def _render_markdown(text):
+    """Convert Markdown text to sanitized HTML and TOC."""
+    md_extensions = getattr(
+        settings, "MARKDOWN_EXTENSIONS", ["extra", "codehilite", "fenced_code"]
+    )
+    md = md_lib.Markdown(extensions=md_extensions)
+    raw_html = md.convert(text)
+    return _sanitize_html(raw_html), _sanitize_html(md.toc)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -185,12 +222,7 @@ class PostDetailView(DetailView):
         context = super().get_context_data(**kwargs)
         post = self.object
 
-        md_extensions = getattr(
-            settings, "MARKDOWN_EXTENSIONS", ["extra", "codehilite", "fenced_code"],
-        )
-        md = md_lib.Markdown(extensions=md_extensions)
-        post.body_html = md.convert(html_mod.escape(post.body))
-        toc = md.toc
+        post.body_html, toc = _render_markdown(post.body)
         post.toc = toc if '<li>' in toc else ''
 
         char_count = len(post.body)
@@ -461,6 +493,14 @@ class RssGuideView(TemplateView):
     template_name = "blog/rss_guide.html"
 
 
+class TermsView(TemplateView):
+    template_name = "blog/terms.html"
+
+
+class PrivacyView(TemplateView):
+    template_name = "blog/privacy.html"
+
+
 class SeriesCreateView(LoginRequiredMixin, CreateView):
     model = Series
     form_class = SeriesForm
@@ -577,12 +617,7 @@ class PostBySeriesView(UserSpaceMixin, ListView):
 
         context["current_post"] = current_post
         if current_post:
-            import markdown as md_lib
-            from django.conf import settings
-            context["current_post_body_html"] = md_lib.markdown(
-                html_mod.escape(current_post.body),
-                extensions=settings.MARKDOWN_EXTENSIONS,
-            )
+            context["current_post_body_html"] = _render_markdown(current_post.body)[0]
             # Find index and prev/next
             try:
                 idx = posts.index(current_post)
@@ -1045,6 +1080,60 @@ def image_upload_ajax(request):
         "width": width,
         "height": height,
         "dedup": False,
+    })
+
+
+# ── Safe Browsing URL check ──────────────────────────────────────────
+
+@require_POST
+def check_url_ajax(request):
+    """Check a URL against Google Safe Browsing API. Returns JSON."""
+    import json
+    from urllib.request import Request, urlopen
+    from urllib.error import URLError
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "无效请求"}, status=400)
+
+    url_to_check = data.get("url", "").strip()
+    if not url_to_check:
+        return JsonResponse({"safe": True})  # no URL = skip
+
+    api_key = getattr(settings, "GOOGLE_SAFE_BROWSING_KEY", "")
+    if not api_key:
+        return JsonResponse({"safe": True, "reason": "no-key"})
+
+    payload = json.dumps({
+        "client": {"clientId": "melicosmos", "clientVersion": "1.0.0"},
+        "threatInfo": {
+            "threatTypes": [
+                "MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE",
+                "POTENTIALLY_HARMFUL_APPLICATION", "THREAT_TYPE_UNSPECIFIED",
+            ],
+            "platformTypes": ["ANY_PLATFORM"],
+            "threatEntryTypes": ["URL"],
+            "threatEntries": [{"url": url_to_check}],
+        },
+    }).encode()
+
+    try:
+        req = Request(
+            f"https://safebrowsing.googleapis.com/v4/threatMatches:find?key={api_key}",
+            data=payload,
+            headers={"Content-Type": "application/json"},
+        )
+        with urlopen(req, timeout=3) as resp:
+            result = json.loads(resp.read())
+    except (URLError, TimeoutError, json.JSONDecodeError):
+        return JsonResponse({"safe": True, "reason": "api-error"})
+
+    threats = result.get("matches", [])
+    threat_types = [m.get("threatType", "") for m in threats]
+    return JsonResponse({
+        "safe": len(threats) == 0,
+        "threats": threat_types if threats else [],
     })
 
 

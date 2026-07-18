@@ -39,6 +39,7 @@ def profile(request):
                 "avatar_url": avatar_src,
                 "website": user_profile.website,
                 "github": user_profile.github,
+                "github_username": _extract_github_username(user_profile.github),
                 "email": request.user.email,
             },
             "latest_memos": latest_memos,
@@ -71,6 +72,16 @@ def _get_latest_memos():
         if len(result) >= 5:
             break
     return result
+
+
+def _extract_github_username(url):
+    """Extract username from GitHub URL like https://github.com/username"""
+    if not url:
+        return ""
+    try:
+        return url.rstrip("/").split("/")[-1]
+    except (IndexError, AttributeError):
+        return ""
 
 
 def _get_active_authors():

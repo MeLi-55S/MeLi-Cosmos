@@ -1,0 +1,44 @@
+{% extends "blog/base.html" %}
+
+{% block title %}用户协议 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">📋 用户协议</h1>
+
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 md:p-8 shadow-lg dark:shadow-2xl space-y-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-light">
+
+        <p><strong>生效日期：</strong>2026 年 7 月 18 日</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">1. 概述</h2>
+        <p>欢迎使用 MeLi Cosmos（以下简称"本平台"）。注册即表示你同意本协议。若不同意，请勿使用。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">2. 用户责任</h2>
+        <ul class="space-y-2 ml-4">
+            <li>你对你发布的所有内容（文章、评论、碎碎念）负全部责任。</li>
+            <li>禁止发布违法、侵权、骚扰、诽谤、色情、暴力或其他违反公序良俗的内容。</li>
+            <li>禁止利用本平台进行垃圾信息传播、网络攻击或任何危害平台安全的行为。</li>
+            <li>禁止滥用邀请机制批量注册恶意账号。</li>
+        </ul>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">3. 内容许可</h2>
+        <p>你在本平台发布的文章内容默认采用 <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh" target="_blank" rel="noopener" class="text-cyan-600 dark:text-cyan-400 hover:underline">CC BY-NC 4.0</a>（署名-非商业性使用 4.0 国际）许可协议。这意味着他人可以自由分享、演绎你的作品，但必须署名且不得用于商业目的。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">4. 隐私</h2>
+        <p>我们仅收集提供基本服务所必需的信息。详见 <a href="{% url 'privacy' %}" class="text-cyan-600 dark:text-cyan-400 hover:underline">隐私政策</a>。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">5. 封禁与终止</h2>
+        <p>违规用户将被封禁（临时或永久）。被封禁用户可在封禁后提交一次申诉。本平台保留在不事先通知的情况下终止服务的权利。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">6. 免责声明</h2>
+        <p>本平台按"现状"提供，不提供任何明示或暗示的担保。本平台不对用户发布内容的准确性、合法性承担责任。</p>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">7. 修订</h2>
+        <p>本协议可能随时更新，更新后将在本页面公示。继续使用本平台即表示接受修订后的协议。</p>
+
+        <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-400 font-mono">
+            如有问题请联系：<a href="mailto:melichem8@gmail.com" class="text-cyan-600 dark:text-cyan-400 hover:underline">melichem8@gmail.com</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

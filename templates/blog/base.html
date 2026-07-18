@@ -399,6 +399,105 @@
         }
     })();
 
+    // External link handler with custom modal + Safe Browsing
+    (function() {
+        var modal = document.createElement('div');
+        modal.id = 'ext-link-modal';
+        modal.className = 'hidden fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4';
+        modal.innerHTML =
+            '<div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-lg w-full p-8">' +
+            '{# Header #}' +
+            '<div class="flex items-center gap-3 mb-6">' +
+            '<div class="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center flex-shrink-0">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+            '</div>' +
+            '<div>' +
+            '<h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">离开本站</h3>' +
+            '<p class="text-sm text-slate-500 dark:text-slate-400">即将跳转到外部网站</p>' +
+            '</div>' +
+            '</div>' +
+            '{# URL display #}' +
+            '<div class="bg-slate-100 dark:bg-slate-800 rounded-xl p-4 mb-4">' +
+            '<div class="flex items-center gap-2 mb-1">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 dark:text-slate-400"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>' +
+            '<span id="ext-link-preview" class="text-sm text-slate-500 dark:text-slate-400 font-mono truncate"></span>' +
+            '</div>' +
+            '<p id="ext-link-url" class="text-xs text-slate-400 dark:text-slate-400 break-all font-mono leading-relaxed"></p>' +
+            '</div>' +
+            '{# Status area — fixed height to prevent layout shift #}' +
+            '<div style="min-height:56px">' +
+            '<div id="ext-link-checking" class="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400" style="visibility:hidden">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="animate-spin"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>' +
+            '<span>正在检查链接安全性...</span>' +
+            '</div>' +
+            '<div id="ext-link-warning" class="p-3 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl text-sm text-red-700 dark:text-red-400 leading-relaxed" style="visibility:hidden"></div>' +
+            '</div>' +
+            '{# Buttons #}' +
+            '<div class="flex gap-3 justify-end mt-5">' +
+            '<button id="ext-link-cancel" class="px-6 py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 transition font-mono text-sm min-h-[48px]">取消</button>' +
+            '<a id="ext-link-go" class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm min-h-[48px] flex items-center gap-2" rel="noopener noreferrer" target="_blank">' +
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>' +
+            '继续访问' +
+            '</a>' +
+            '</div></div>';
+        document.body.appendChild(modal);
+
+        var urlEl = document.getElementById('ext-link-url');
+        var previewEl = document.getElementById('ext-link-preview');
+        var warningEl = document.getElementById('ext-link-warning');
+        var checkingEl = document.getElementById('ext-link-checking');
+        var goBtn = document.getElementById('ext-link-go');
+        var cancelBtn = document.getElementById('ext-link-cancel');
+
+        function show(key, visible) { key.style.visibility = visible ? 'visible' : 'hidden'; }
+
+        function showModal(url) {
+            var u = new URL(url);
+            previewEl.textContent = u.hostname + u.pathname;
+            urlEl.textContent = url;
+            show(warningEl, false);
+            show(checkingEl, true);
+            goBtn.href = url;
+            modal.classList.remove('hidden');
+            checkSafeBrowsing(url);
+        }
+
+        function checkSafeBrowsing(url) {
+            fetch('{% url "check_url_ajax" %}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+                body: JSON.stringify({url: url})
+            })
+            .then(function(r) { return r.ok ? r.json() : {safe: true}; })
+            .then(function(data) {
+                show(checkingEl, false);
+                if (!data.safe && data.threats && data.threats.length > 0) {
+                    var labels = {'MALWARE': '恶意软件', 'SOCIAL_ENGINEERING': '钓鱼/社交工程攻击', 'UNWANTED_SOFTWARE': '潜在有害软件'};
+                    var types = data.threats.map(function(t) { return labels[t] || t; }).join('、');
+                    warningEl.innerHTML = '<div class="flex items-start gap-2"><span class="text-base flex-shrink-0">&#9888;</span><span>Google 安全浏览检测到风险：<strong>' + types + '</strong><br>强烈建议不要继续访问。</span></div>';
+                    show(warningEl, true);
+                }
+            })
+            .catch(function() { show(checkingEl, false); });
+        }
+
+        cancelBtn.addEventListener('click', function() { modal.classList.add('hidden'); });
+        modal.addEventListener('click', function(e) { if (e.target === modal) modal.classList.add('hidden'); });
+        goBtn.addEventListener('click', function() { modal.classList.add('hidden'); });
+
+        document.addEventListener('click', function(e) {
+            var a = e.target.closest('a');
+            if (!a || !a.href) return;
+            if (a.getAttribute('id') === 'ext-link-go') return;
+            var current = new URL(window.location.href);
+            var target = new URL(a.href);
+            if (target.hostname !== current.hostname) {
+                e.preventDefault();
+                showModal(a.href);
+            }
+        });
+    })();
+
     // 移动端汉堡菜单 toggle
     var menuToggle = document.getElementById('menu-toggle');
     var mobileMenu = document.getElementById('mobile-menu');

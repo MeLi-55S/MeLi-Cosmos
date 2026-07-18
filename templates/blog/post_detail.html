@@ -125,6 +125,12 @@
         </div>
         {% endif %}
 
+        {# CC License #}
+        <div class="mt-4 text-xs text-slate-400 dark:text-slate-400 font-mono flex items-center gap-2">
+            <span>CC BY-NC 4.0</span>
+            <a href="https://creativecommons.org/licenses/by-nc/4.0/deed.zh" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">署名-非商业性使用 4.0 国际</a>
+        </div>
+
         {# 作者操作 #}
         {% if user.is_authenticated and user == post.author %}
         <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 flex gap-4 items-center">

@@ -151,6 +151,14 @@ class UserProfileForm(forms.ModelForm):
             "placeholder": "邮箱地址（可选）",
         }),
     )
+    github = forms.CharField(
+        required=False,
+        max_length=39,
+        widget=forms.TextInput(attrs={
+            "class": "w-full bg-slate-100 dark:bg-slate-900 py-3 px-4 text-slate-900 dark:text-slate-100 text-sm outline-none transition",
+            "placeholder": "用户名",
+        }),
+    )
 
     class Meta:
         model = UserProfile
@@ -173,16 +181,22 @@ class UserProfileForm(forms.ModelForm):
                 "class": INPUT_CLASS,
                 "placeholder": "个人网站 URL（可选）",
             }),
-            "github": forms.URLInput(attrs={
-                "class": INPUT_CLASS,
-                "placeholder": "GitHub URL（可选）",
-            }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if self.instance and self.instance.pk and self.instance.user:
             self.fields["email"].initial = self.instance.user.email
+            self.fields["github"].initial = self.instance.github_username
+
+    def clean_github(self):
+        raw = self.cleaned_data.get("github", "").strip()
+        # Strip full URL if pasted
+        for prefix in ("https://github.com/", "http://github.com/", "github.com/"):
+            if raw.lower().startswith(prefix):
+                raw = raw[len(prefix):]
+        username = raw.lstrip("@").strip("/")
+        return "https://github.com/" + username if username else ""
 
     def save(self, commit=True):
         instance = super().save(commit=commit)
