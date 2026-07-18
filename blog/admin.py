@@ -15,8 +15,14 @@ def _get_invitee_ids(user):
     ).exclude(invitee=None).values_list('invitee_id', flat=True))
 
 
-def _ban_chain(user, banned_by, reason, is_permanent=False):
+def _ban_chain(user, banned_by, reason, is_permanent=False, _visited=None):
     """Recursively ban `user` and all users in their invite chain."""
+    if _visited is None:
+        _visited = set()
+    if user.pk in _visited:
+        return
+    _visited.add(user.pk)
+
     profile = user.profile
     if profile.is_permanent_ban:
         return
@@ -39,11 +45,17 @@ def _ban_chain(user, banned_by, reason, is_permanent=False):
         except User.DoesNotExist:
             continue
         chain_reason = f'上级用户 {user.username} 被封禁，连带封禁。原始原因：{reason or "未提供"}'
-        _ban_chain(invitee, banned_by, chain_reason, is_permanent=False)
+        _ban_chain(invitee, banned_by, chain_reason, is_permanent=False, _visited=_visited)
 
 
-def _unban_chain(user):
+def _unban_chain(user, _visited=None):
     """Recursively unban `user` and all users in their invite chain (unless permanent)."""
+    if _visited is None:
+        _visited = set()
+    if user.pk in _visited:
+        return
+    _visited.add(user.pk)
+
     profile = user.profile
     if profile.is_permanent_ban:
         return
@@ -59,7 +71,7 @@ def _unban_chain(user):
             invitee = User.objects.get(pk=uid)
         except User.DoesNotExist:
             continue
-        _unban_chain(invitee)
+        _unban_chain(invitee, _visited=_visited)
 
 
 @admin.register(Category)

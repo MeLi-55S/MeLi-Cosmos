@@ -6,6 +6,7 @@ from collections import OrderedDict
 from datetime import date, timedelta
 
 import hashlib
+import html as html_mod
 from io import BytesIO
 
 import markdown as md_lib
@@ -19,6 +20,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import IntegrityError
 from django.db.models import F, Q, Sum
 from django.http import Http404, JsonResponse
@@ -44,10 +46,12 @@ def _get_related_posts(post, max_results=3):
     """Score related posts by category match (+3) and tag overlap (+2 each)."""
     candidates = Post.objects.filter(
         status="published"
-    ).exclude(pk=post.pk).select_related("category", "author", "author__profile")
+    ).exclude(pk=post.pk).select_related(
+        "category", "author", "author__profile"
+    ).prefetch_related("tags").order_by("-created_time")[:50]
 
     current_category = post.category
-    current_tag_ids = set(post.tags.values_list("id", flat=True))
+    current_tag_ids = {t.id for t in post.tags.all()}
 
     if not current_category and not current_tag_ids:
         return []
@@ -57,7 +61,7 @@ def _get_related_posts(post, max_results=3):
         score = 0
         if current_category and candidate.category_id == current_category.pk:
             score += 3
-        candidate_tag_ids = set(candidate.tags.values_list("id", flat=True))
+        candidate_tag_ids = {t.id for t in candidate.tags.all()}
         overlap = len(current_tag_ids & candidate_tag_ids)
         score += overlap * 2
         if score > 0:
@@ -65,6 +69,13 @@ def _get_related_posts(post, max_results=3):
 
     scored.sort(key=lambda x: (-x[0], -x[1].created_time.timestamp()))
     return [c for _, c in scored[:max_results]]
+
+
+def _safe_redirect(url, fallback='/'):
+    """Validate redirect URL against allowed hosts to prevent open redirect."""
+    if url and url_has_allowed_host_and_scheme(url, allowed_hosts=None):
+        return redirect(url)
+    return redirect(fallback)
 
 
 def _format_like_display(names, count):
@@ -178,7 +189,7 @@ class PostDetailView(DetailView):
             settings, "MARKDOWN_EXTENSIONS", ["extra", "codehilite", "fenced_code"],
         )
         md = md_lib.Markdown(extensions=md_extensions)
-        post.body_html = md.convert(post.body)
+        post.body_html = md.convert(html_mod.escape(post.body))
         toc = md.toc
         post.toc = toc if '<li>' in toc else ''
 
@@ -380,7 +391,7 @@ class MemoCreateView(LoginRequiredMixin, CreateView):
 
     def get_success_url(self):
         next_url = self.request.POST.get("next") or self.request.GET.get("next")
-        if next_url:
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=None):
             return next_url
         return reverse("memo_list")
 
@@ -569,7 +580,7 @@ class PostBySeriesView(UserSpaceMixin, ListView):
             import markdown as md_lib
             from django.conf import settings
             context["current_post_body_html"] = md_lib.markdown(
-                current_post.body,
+                html_mod.escape(current_post.body),
                 extensions=settings.MARKDOWN_EXTENSIONS,
             )
             # Find index and prev/next
@@ -632,7 +643,7 @@ class UserSpaceView(UserSpaceMixin, ListView):
         return qs
 
 
-class DraftsView(UserSpaceMixin, ListView):
+class DraftsView(LoginRequiredMixin, UserSpaceMixin, ListView):
     """Show draft posts for the space owner (owner only)."""
     model = Post
     template_name = "blog/includes/user_layout.html"
@@ -640,6 +651,11 @@ class DraftsView(UserSpaceMixin, ListView):
     paginate_by = 10
     active_tab = "drafts"
     content_template = "blog/includes/user_posts.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if request.user != self.space_owner:
+            raise Http404
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         return Post.objects.filter(
@@ -728,17 +744,21 @@ class InviteRegisterView(CreateView):
 
     def form_valid(self, form):
         user = form.save()
-        # Mark invite code as used
-        self.invite_code.is_used = True
-        self.invite_code.invitee = user
-        self.invite_code.used_at = timezone.now()
-        self.invite_code.save()
+        # Atomically mark invite code as used (prevents double-use race)
+        updated = InviteCode.objects.filter(
+            pk=self.invite_code.pk, is_used=False
+        ).update(is_used=True, invitee=user, used_at=timezone.now())
+        if not updated:
+            user.delete()
+            messages.error(self.request, "邀请码已被使用。")
+            return redirect("login")
+        self.invite_code.refresh_from_db()
         # Auto-login
         login(self.request, user)
         messages.success(self.request, f"欢迎加入 MeLi Cosmos，{user.username}！")
         # Respect next parameter, fallback to profile setup. Skip landing page.
         next_url = self.request.POST.get("next") or self.request.GET.get("next")
-        if next_url and next_url != "/" and next_url != "":
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=None):
             return redirect(next_url)
         return redirect("profile_setup")
 
@@ -827,7 +847,7 @@ class InviteCodeEntryView(TemplateView):
                 return self.render_to_response(self.get_context_data())
             next_url = request.POST.get("next", "")
             url = reverse("register", kwargs={"code": code})
-            if next_url:
+            if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=None):
                 url += "?next=" + next_url
             return redirect(url)
         except InviteCode.DoesNotExist:
@@ -863,6 +883,7 @@ def view_count_ajax(request):
 
     salt = settings.SECRET_KEY
     ip_hash = hashlib.sha256((salt + ip).encode()).hexdigest()
+    fp_hash = hashlib.sha256((salt + fingerprint).encode()).hexdigest()[:64]
 
     # Secondary: session check (AND logic — both must pass)
     session_key = f"post_viewed_{post_id}"
@@ -874,14 +895,15 @@ def view_count_ajax(request):
     cutoff = timezone.now() - timedelta(hours=cooldown_hours)
 
     if ViewLog.objects.filter(post_id=post_id, created_at__gte=cutoff).filter(
-        Q(fingerprint_hash=fingerprint) | Q(ip_hash=ip_hash)
+        Q(fingerprint_hash=fp_hash) | Q(ip_hash=ip_hash)
     ).exists():
         return JsonResponse({"counted": False})
 
     Post.objects.filter(pk=post_id).update(views=F("views") + 1)
+    fp_hash = hashlib.sha256((salt + fingerprint).encode()).hexdigest()[:64]
     ViewLog.objects.create(
         post_id=post_id,
-        fingerprint_hash=fingerprint,
+        fingerprint_hash=fp_hash,
         ip_hash=ip_hash,
     )
     request.session[session_key] = True
@@ -1057,11 +1079,13 @@ def like_toggle_ajax(request):
     try:
         app_label, model = content_type_key.split(".")
         ct = ContentType.objects.get(app_label=app_label, model=model)
+        obj = ct.get_object_for_this_type(pk=object_id)
     except (ValueError, ContentType.DoesNotExist):
         return JsonResponse({"error": "无效的内容类型"}, status=400)
+    except ct.model_class().DoesNotExist:
+        return JsonResponse({"error": "内容不存在"}, status=404)
 
     # Check visibility
-    obj = ct.get_object_for_this_type(pk=object_id)
     if hasattr(obj, "status") and obj.status != "published" and obj.author != request.user:
         return JsonResponse({"error": "无法点赞未发布的内容"}, status=403)
     if hasattr(obj, "is_public") and not obj.is_public and obj.author != request.user:
@@ -1100,42 +1124,54 @@ def like_toggle_ajax(request):
 @require_POST
 def comment_create(request):
     """Create a comment on any commentable object. Redirects on success."""
+    next_url = request.POST.get("next") or "/"
+    go = lambda: _safe_redirect(next_url)
+
     if not request.user.is_authenticated:
         messages.error(request, "请先登录后再评论。")
-        next_url = request.POST.get("next") or "/"
-        return redirect(next_url)
+        return go()
 
     form = CommentForm(request.POST)
-    next_url = request.POST.get("next") or "/"
-
     if not form.is_valid():
         messages.error(request, "评论内容不能为空。")
-        return redirect(next_url)
+        return go()
 
     content_type_key = request.POST.get("content_type")
     object_id = request.POST.get("object_id")
 
     if not content_type_key or not object_id:
         messages.error(request, "参数错误。")
-        return redirect(next_url)
+        return go()
 
     try:
         app_label, model = content_type_key.split(".")
         ct = ContentType.objects.get(app_label=app_label, model=model)
         content_object = ct.get_object_for_this_type(pk=object_id)
-    except (ValueError, ContentType.DoesNotExist):
+    except (ValueError, ContentType.DoesNotExist, ct.model_class().DoesNotExist):
         messages.error(request, "评论目标不存在。")
-        return redirect(next_url)
+        return go()
+
+    # Duplicate check: same (user, target, content) within 30s
+    dup = Comment.objects.filter(
+        user=request.user,
+        content_type=ct,
+        object_id=object_id,
+        content=form.cleaned_data["content"],
+        created_time__gte=timezone.now() - timezone.timedelta(seconds=30),
+    ).first()
+    if dup:
+        messages.warning(request, "请勿重复提交评论。")
+        return go()
 
     # Visibility check
     if hasattr(content_object, "is_public") and not content_object.is_public:
         if getattr(content_object, "author", None) != request.user:
             messages.error(request, "无法评论非公开内容。")
-            return redirect(next_url)
+            return go()
     if hasattr(content_object, "status"):
         if content_object.status != "published" and getattr(content_object, "author", None) != request.user:
             messages.error(request, "无法评论未发布的内容。")
-            return redirect(next_url)
+            return go()
 
     Comment.objects.create(
         user=request.user,
@@ -1144,7 +1180,7 @@ def comment_create(request):
         content=form.cleaned_data["content"],
     )
     messages.success(request, "评论已发布。")
-    return redirect(next_url)
+    return go()
 
 
 class MemoDetailView(DetailView):

@@ -10,6 +10,24 @@ from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 
 
+def _unique_slug(model_cls, base_slug, author, exclude_pk=None):
+    """Return a unique slug for the given author by appending -2, -3, etc."""
+    from django.utils.text import slugify
+    slug = slugify(base_slug, allow_unicode=True)
+    if not slug:
+        return None
+    candidate = slug
+    n = 2
+    while True:
+        qs = model_cls.objects.filter(slug=candidate, author=author)
+        if exclude_pk is not None:
+            qs = qs.exclude(pk=exclude_pk)
+        if not qs.exists():
+            return candidate
+        candidate = f'{slug}-{n}'
+        n += 1
+
+
 class Category(models.Model):
     name = models.CharField('分类名称', max_length=50)
     slug = models.SlugField('URL别名', max_length=50, blank=True)
@@ -27,8 +45,7 @@ class Category(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            from django.utils.text import slugify
-            self.slug = slugify(self.name, allow_unicode=True)
+            self.slug = _unique_slug(Category, self.name, self.author) or f'category-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
 
 
@@ -49,8 +66,7 @@ class Tag(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            from django.utils.text import slugify
-            self.slug = slugify(self.name, allow_unicode=True)
+            self.slug = _unique_slug(Tag, self.name, self.author) or f'tag-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
 
 
@@ -98,11 +114,10 @@ class Post(models.Model):
         return self.title
 
     def save(self, *args, **kwargs):
-        if not self.excerpt:
-            self.excerpt = self.body[:150] + '...'
+        if not self.excerpt and self.body:
+            self.excerpt = self.body[:150] + ('...' if len(self.body) > 150 else '')
         if not self.slug:
-            from django.utils.text import slugify
-            self.slug = slugify(self.title, allow_unicode=True)
+            self.slug = _unique_slug(Post, self.title, self.author, exclude_pk=self.pk) or f'post-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
 
 
@@ -124,8 +139,7 @@ class Series(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            from django.utils.text import slugify
-            self.slug = slugify(self.name, allow_unicode=True)
+            self.slug = _unique_slug(Series, self.name, self.author) or f'series-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
 
 

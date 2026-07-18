@@ -282,6 +282,10 @@
                     showStatus('文件类型不是图片', false);
                     return;
                 }
+                if (file.size > 10 * 1024 * 1024) {
+                    showStatus('文件过大，单张图片不能超过 10 MB', false);
+                    return;
+                }
                 showStatus('上传中...', true);
                 var fd = new FormData();
                 fd.append('image', file);

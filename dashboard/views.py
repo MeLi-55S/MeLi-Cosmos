@@ -31,10 +31,11 @@ def _build_user_tree():
 
 
 def _render_tree_node(uid, edges, users_map, is_root=True):
+    import html
     if uid not in users_map:
         return ''
     u = users_map[uid]
-    name = u.profile.display_name or u.username
+    name = html.escape(u.profile.display_name or u.username)
     ban = u.profile.is_banned
     children = edges.get(uid, [])
 
