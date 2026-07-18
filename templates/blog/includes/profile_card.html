@@ -36,10 +36,10 @@
                     <span class="text-slate-400 dark:text-slate-400 truncate max-w-32">{{ profile.github|truncatechars:20 }}</span>
                 </a>
                 {% endif %}
-                {% if profile.mastodon %}
-                <a href="{{ profile.mastodon }}" target="_blank" rel="noopener" class="flex justify-between hover:text-cyan-600 dark:hover:text-cyan-400 transition">
-                    <span>🐘 Mastodon</span>
-                    <span class="text-slate-400 dark:text-slate-400 truncate max-w-32">{{ profile.mastodon|truncatechars:20 }}</span>
+                {% if profile.email %}
+                <a href="mailto:{{ profile.email }}" class="flex justify-between hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                    <span>📧 邮箱</span>
+                    <span class="text-slate-400 dark:text-slate-400 truncate max-w-32">{{ profile.email|truncatechars:20 }}</span>
                 </a>
                 {% endif %}
             </div>
@@ -75,9 +75,6 @@
             <div class="text-4xl mb-3">🌌</div>
             <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">MeLi Cosmos</h3>
             <p class="text-xs text-cyan-600 dark:text-cyan-400 font-mono mb-4">多用户博客平台</p>
-            <p class="text-xs leading-relaxed font-light mb-6 {% if profile.bio %}text-slate-500 dark:text-slate-400{% else %}text-slate-400 dark:text-slate-400 italic{% endif %}">
-                {% if profile.bio %}{{ profile.bio }}{% else %}这个人很懒，还没有填写个人简介……{% endif %}
-            </p>
             <a href="{% url 'login' %}"
                class="block w-full py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm text-center shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20">
                 登录

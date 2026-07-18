@@ -1,0 +1,38 @@
+{% extends "blog/base.html" %}
+
+{% block title %}RSS 订阅 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">📡 RSS 订阅</h1>
+
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-8 shadow-lg dark:shadow-2xl space-y-6 text-sm leading-relaxed text-slate-700 dark:text-slate-300 font-light">
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">全站 RSS</h2>
+        <p>订阅全站最新文章，所有作者发布的公开内容都会出现在此 Feed 中。</p>
+        <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 font-mono text-xs">
+            <span class="text-slate-400 dark:text-slate-400">订阅地址：</span>
+            <a href="{% url 'rss_feed' %}" class="text-cyan-600 dark:text-cyan-400 hover:underline break-all">{{ request.scheme }}://{{ request.get_host }}{% url 'rss_feed' %}</a>
+        </div>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono mt-8">个人 RSS</h2>
+        <p>只订阅特定作者的文章，在作者空间页面找到 <code class="bg-slate-100 dark:bg-slate-900 px-1.5 py-0.5 rounded text-cyan-600 dark:text-cyan-400">@用户名</code>，其 RSS 地址格式为：</p>
+        <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 font-mono text-xs">
+            <span class="text-slate-400 dark:text-slate-400">格式：</span>
+            <span class="text-cyan-600 dark:text-cyan-400 break-all">{{ request.scheme }}://{{ request.get_host }}/@用户名/feed/</span>
+        </div>
+
+        <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono mt-8">如何使用 RSS</h2>
+        <ol class="space-y-3 ml-4 list-decimal">
+            <li>选择一个 RSS 阅读器（推荐：<span class="text-cyan-600 dark:text-cyan-400">Feedly</span>、<span class="text-cyan-600 dark:text-cyan-400">Inoreader</span>、<span class="text-cyan-600 dark:text-cyan-400">NetNewsWire</span>、<span class="text-cyan-600 dark:text-cyan-400">Fluent Reader</span>）</li>
+            <li>复制上方订阅地址</li>
+            <li>在阅读器中点击「添加订阅」或「Add Feed」，粘贴地址即可</li>
+            <li>之后博客有新文章发布时，阅读器会自动拉取更新</li>
+        </ol>
+
+        <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-400">
+            <p>RSS（Really Simple Syndication）是一种开放标准的内容订阅协议，无需注册账号即可追踪网站更新。</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -39,7 +39,7 @@ def profile(request):
                 "avatar_url": avatar_src,
                 "website": user_profile.website,
                 "github": user_profile.github,
-                "mastodon": user_profile.mastodon,
+                "email": request.user.email,
             },
             "latest_memos": latest_memos,
             "total_posts": Post.objects.filter(status="published").count(),

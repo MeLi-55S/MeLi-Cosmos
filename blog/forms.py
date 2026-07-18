@@ -133,9 +133,17 @@ class MemoForm(forms.ModelForm):
 
 
 class UserProfileForm(forms.ModelForm):
+    email = forms.EmailField(
+        required=False,
+        widget=forms.EmailInput(attrs={
+            "class": INPUT_CLASS,
+            "placeholder": "邮箱地址（可选）",
+        }),
+    )
+
     class Meta:
         model = UserProfile
-        fields = ["display_name", "title", "bio", "website", "github", "mastodon"]
+        fields = ["display_name", "title", "bio", "website", "github"]
         widgets = {
             "display_name": forms.TextInput(attrs={
                 "class": INPUT_CLASS,
@@ -158,8 +166,17 @@ class UserProfileForm(forms.ModelForm):
                 "class": INPUT_CLASS,
                 "placeholder": "GitHub URL（可选）",
             }),
-            "mastodon": forms.URLInput(attrs={
-                "class": INPUT_CLASS,
-                "placeholder": "Mastodon URL（可选）",
-            }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.user:
+            self.fields["email"].initial = self.instance.user.email
+
+    def save(self, commit=True):
+        instance = super().save(commit=commit)
+        if commit:
+            user = instance.user
+            user.email = self.cleaned_data.get("email", "")
+            user.save(update_fields=["email"])
+        return instance

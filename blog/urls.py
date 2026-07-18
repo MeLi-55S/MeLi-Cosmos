@@ -28,6 +28,7 @@ urlpatterns = [
     path("feed/", LatestPostsFeed(), name="rss_feed"),
     path("search/", views.SearchView.as_view(), name="search"),
     path("about/", views.AboutView.as_view(), name="about"),
+    path("rss/", views.RssGuideView.as_view(), name="rss_guide"),
 
     # ── Auth ────────────────────────────────────────────────────────
     path("accounts/login/", auth_views.LoginView.as_view(), name="login"),
@@ -69,6 +70,7 @@ urlpatterns = [
     path("ajax/view/", views.view_count_ajax, name="view_count_ajax"),
     path("ajax/image/upload/", views.image_upload_ajax, name="image_upload_ajax"),
     path("ajax/avatar/upload/", views.avatar_upload_ajax, name="avatar_upload_ajax"),
+    path("ajax/ping/", views.ping, name="ping"),
 
     # ── Legacy / Global (no username) ───────────────────────────────
     path("post/<uslug:slug>/", views.PostDetailView.as_view(), name="post_detail_legacy"),

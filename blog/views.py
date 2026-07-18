@@ -381,6 +381,10 @@ class AboutView(TemplateView):
         return context
 
 
+class RssGuideView(TemplateView):
+    template_name = "blog/rss_guide.html"
+
+
 class SeriesCreateView(LoginRequiredMixin, CreateView):
     model = Series
     form_class = SeriesForm
@@ -410,8 +414,8 @@ class SeriesListView(UserSpaceMixin, ListView):
         if hasattr(self, "space_owner"):
             return Series.objects.filter(
                 author=self.space_owner
-            ).prefetch_related("post_set")
-        return Series.objects.prefetch_related("post_set").all()
+            ).prefetch_related("post_set").select_related("author")
+        return Series.objects.prefetch_related("post_set").select_related("author").all()
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -933,3 +937,11 @@ def image_upload_ajax(request):
         "height": height,
         "dedup": False,
     })
+
+
+# ── Ping endpoint for client-side latency measurement ────────────────
+
+def ping(request):
+    """Return empty 204 — used by about page JS to measure RTT."""
+    from django.http import HttpResponse
+    return HttpResponse(status=204)

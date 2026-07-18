@@ -100,7 +100,7 @@ class Post(models.Model):
             self.excerpt = self.body[:150] + '...'
         if not self.slug:
             from django.utils.text import slugify
-            self.slug = slugify(self.title)
+            self.slug = slugify(self.title, allow_unicode=True)
         super().save(*args, **kwargs)
 
 

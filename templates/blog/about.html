@@ -14,7 +14,7 @@
 
         {# 服务器状态 #}
         {% if status %}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-8">
             <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
                 <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-1">服务器</p>
                 <p class="text-sm font-mono text-slate-700 dark:text-slate-300 truncate" title="{{ status.hostname }}">{{ status.hostname }}</p>
@@ -32,6 +32,10 @@
                 <p class="text-sm font-mono {% if status.db_latency_ms < 5 %}text-green-600 dark:text-green-400{% elif status.db_latency_ms < 20 %}text-amber-600 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %}">
                     {{ status.db_latency_ms }} ms
                 </p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-1">网络延迟</p>
+                <p id="net-latency" class="text-sm font-mono text-slate-400 dark:text-slate-400">—</p>
             </div>
         </div>
         {% endif %}
@@ -52,12 +56,27 @@
         </p>
 
         <div class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-400 dark:text-slate-400 font-mono space-x-4">
-            <span>GitHub</span>
+            <a href="https://github.com/MeLi-55S/MeLi-Cosmos/" target="_blank" rel="noopener" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">GitHub</a>
             <span class="text-slate-400 dark:text-slate-700">·</span>
-            <span>Mastodon</span>
-            <span class="text-slate-400 dark:text-slate-700">·</span>
-            <a href="mailto:debris@mycosmos.dev" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">邮件联系</a>
+            <a href="mailto:melichem8@gmail.com" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition">邮件联系</a>
         </div>
     </div>
 </div>
+
+<script>
+(function() {
+    var el = document.getElementById('net-latency');
+    var start = performance.now();
+    fetch('{% url "ping" %}', { method: 'HEAD' }).then(function() {
+        var ms = Math.round(performance.now() - start);
+        var cls = ms < 50 ? 'text-green-600 dark:text-green-400'
+                : ms < 200 ? 'text-amber-600 dark:text-amber-400'
+                : 'text-red-600 dark:text-red-400';
+        el.textContent = ms + ' ms';
+        el.className = 'text-sm font-mono ' + cls;
+    }).catch(function() {
+        el.textContent = '—';
+    });
+})();
+</script>
 {% endblock %}
