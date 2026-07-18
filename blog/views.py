@@ -23,6 +23,7 @@ from django.core.files.base import ContentFile
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import IntegrityError
 from django.db.models import F, Q, Sum
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
@@ -1184,9 +1185,11 @@ def like_toggle_ajax(request):
         app_label, model = content_type_key.split(".")
         ct = ContentType.objects.get(app_label=app_label, model=model)
         obj = ct.get_object_for_this_type(pk=object_id)
-    except (ValueError, ContentType.DoesNotExist):
+    except ValueError:
         return JsonResponse({"error": "无效的内容类型"}, status=400)
-    except ct.model_class().DoesNotExist:
+    except ContentType.DoesNotExist:
+        return JsonResponse({"error": "无效的内容类型"}, status=400)
+    except ObjectDoesNotExist:
         return JsonResponse({"error": "内容不存在"}, status=404)
 
     # Check visibility
@@ -1211,7 +1214,7 @@ def like_toggle_ajax(request):
     else:
         top_users = Like.objects.filter(
             content_type=ct, object_id=object_id
-        ).select_related("user__profile").order_by("-modified_time")[:2]
+        ).select_related("user__profile").order_by("-created_time")[:2]
         names = [
             u.user.profile.display_name or u.user.username
             for u in top_users
@@ -1251,7 +1254,7 @@ def comment_create(request):
         app_label, model = content_type_key.split(".")
         ct = ContentType.objects.get(app_label=app_label, model=model)
         content_object = ct.get_object_for_this_type(pk=object_id)
-    except (ValueError, ContentType.DoesNotExist, ct.model_class().DoesNotExist):
+    except (ValueError, ContentType.DoesNotExist, ObjectDoesNotExist):
         messages.error(request, "评论目标不存在。")
         return go()
 
