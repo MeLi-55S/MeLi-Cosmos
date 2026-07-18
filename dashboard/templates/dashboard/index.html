@@ -1,0 +1,217 @@
+{% extends "blog/base.html" %}
+
+{% block title %}管理面板 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  <div class="flex items-center justify-between mb-8">
+    <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 font-mono">管理面板</h1>
+    <a href="/admin/" class="text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 transition">Django Admin &rarr;</a>
+  </div>
+
+  {# Stats row #}
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8">
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-cyan-600 dark:text-cyan-400 font-mono">{{ stats.total_users }}</p>
+      <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">用户</p>
+    </div>
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-green-600 dark:text-green-400 font-mono">{{ stats.published_posts }}</p>
+      <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">已发布文章</p>
+    </div>
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 font-mono">{{ stats.total_comments }}</p>
+      <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">评论</p>
+    </div>
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+      <p class="text-2xl font-bold text-amber-600 dark:text-amber-400 font-mono">{{ stats.total_views }}</p>
+      <p class="text-xs text-slate-400 dark:text-slate-400 mt-1">总浏览</p>
+    </div>
+  </div>
+
+  {# Details + 7-day #}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
+      <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-3">数据总览</h3>
+      <div class="space-y-2 font-mono text-xs">
+        <div class="flex justify-between"><span class="text-slate-400">总文章</span><span class="text-slate-700 dark:text-slate-300">{{ stats.total_posts }}（草稿 {{ stats.draft_posts }}）</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">碎碎念</span><span class="text-slate-700 dark:text-slate-300">{{ stats.total_memos }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">点赞</span><span class="text-slate-700 dark:text-slate-300">{{ stats.total_likes }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">树状图用户</span><span class="text-slate-700 dark:text-slate-300">{{ tree_user_count }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">游离用户</span><span class="text-slate-700 dark:text-slate-300">{{ orphan_count }}</span></div>
+      </div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
+      <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-3">近 7 天</h3>
+      <div class="space-y-2 font-mono text-xs">
+        <div class="flex justify-between"><span class="text-slate-400">新增用户</span><span class="text-green-600 dark:text-green-400">+{{ stats.users_7d }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">新文章</span><span class="text-green-600 dark:text-green-400">+{{ stats.posts_7d }}</span></div>
+        <div class="flex justify-between"><span class="text-slate-400">浏览量</span><span class="text-cyan-600 dark:text-cyan-400">{{ stats.views_7d }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  {# Server status #}
+  <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-8">
+    <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-3">服务器状态</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs text-center">
+      <div>
+        <p class="text-slate-400">Host</p>
+        <p class="text-slate-700 dark:text-slate-300 truncate">{{ server.hostname }}</p>
+      </div>
+      <div>
+        <p class="text-slate-400">Python</p>
+        <p class="text-cyan-600 dark:text-cyan-400">{{ server.python_version }}</p>
+      </div>
+      <div>
+        <p class="text-slate-400">DB</p>
+        <p class="text-purple-600 dark:text-purple-400">{{ server.db_engine }}</p>
+      </div>
+      <div>
+        <p class="text-slate-400">DB 延迟</p>
+        <p class="{% if server.db_latency_ms < 5 %}text-green-600 dark:text-green-400{% elif server.db_latency_ms < 20 %}text-amber-600 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+          {{ server.db_latency_ms }} ms
+        </p>
+      </div>
+    </div>
+  </div>
+
+  {# Pending appeals #}
+  <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-8">
+    <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-3">
+      待处理申诉
+      {% if appeal_count %}<span class="text-red-600 dark:text-red-400">({{ appeal_count }})</span>{% endif %}
+    </h3>
+    {% if appeals %}
+    <div class="space-y-3">
+      {% for a in appeals %}
+      <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400">@{{ a.user.username }}</span>
+          <span class="text-xs text-slate-400">{{ a.created_at|date:"m-d H:i" }}</span>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{{ a.content|truncatechars:200 }}</p>
+        <a href="/admin/blog/banappeal/{{ a.pk }}/change/" class="text-xs font-mono text-purple-600 dark:text-purple-400 hover:underline mt-1 inline-block">处理 &rarr;</a>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-xs text-slate-400 dark:text-slate-400 text-center py-4">暂无待处理申诉</p>
+    {% endif %}
+  </div>
+
+  {# User tree #}
+  <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
+    <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-4">用户邀请树 ({{ tree_user_count }} 人)</h3>
+    {% if tree_html %}
+    <div class="overflow-x-auto tree-wrapper">
+      {{ tree_html|safe }}
+    </div>
+    {% else %}
+    <p class="text-xs text-slate-400 dark:text-slate-400 text-center py-4">暂无邀请记录</p>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+.tree-wrapper { font-size: 14px; }
+.tree, .tree ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+.tree li {
+  position: relative;
+  padding-left: 28px;
+  padding-top: 1px;
+  padding-bottom: 1px;
+}
+/* Vertical line */
+.tree li::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 1.5px;
+  background: #cbd5e1;
+}
+html.dark .tree li::before { background: #475569; }
+/* Root nodes: no vertical line */
+.tree > li.tree-root::before { display: none; }
+/* Last child: half line */
+.tree li:last-child::before { height: 14px; }
+/* Horizontal branch */
+.tree li::after {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 14px;
+  width: 14px;
+  height: 1.5px;
+  background: #cbd5e1;
+}
+html.dark .tree li::after { background: #475569; }
+/* Root nodes: no horizontal branch */
+.tree > li.tree-root::after { display: none; }
+
+.tree-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px 3px 6px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+html.dark .tree-node {
+  background: #0f172a;
+  border-color: #334155;
+}
+.tree-node:hover {
+  border-color: #06b6d4;
+  background: #ecfeff;
+}
+html.dark .tree-node:hover {
+  border-color: #22d3ee;
+  background: #0e2433;
+}
+
+.tree-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 8px;
+  transition: transform 0.15s;
+  flex-shrink: 0;
+}
+.tree-toggle:hover { color: #06b6d4; }
+.tree-toggle-spacer { width: 18px; flex-shrink: 0; }
+
+/* Collapsed state */
+li.collapsed > ul { display: none; }
+li.collapsed > .tree-node .tree-toggle { transform: rotate(-90deg); }
+
+.pill {
+  font-size: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.pill-ok  { background: #dcfce7; color: #16a34a; }
+.pill-temp { background: #fef3c7; color: #d97706; }
+.pill-perm { background: #fee2e2; color: #dc2626; }
+html.dark .pill-ok  { background: #14532d33; color: #4ade80; }
+html.dark .pill-temp { background: #78350f33; color: #fbbf24; }
+html.dark .pill-perm { background: #7f1d1d33; color: #f87171; }
+</style>
+{% endblock %}

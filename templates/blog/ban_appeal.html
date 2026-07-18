@@ -1,0 +1,64 @@
+{% extends "blog/base.html" %}
+
+{% block title %}封禁申诉 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-2xl md:text-3xl font-bold text-slate-900 dark:text-slate-100 mb-8 font-mono">申诉</h1>
+
+  <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 md:p-8 shadow-lg dark:shadow-2xl">
+
+    {# Ban info #}
+    <div class="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 rounded-xl p-4 mb-6">
+      <p class="text-sm font-mono text-red-700 dark:text-red-400 font-bold mb-2">
+        {% if is_permanent %}⛔ 您的账号已被永久封禁{% else %}🚫 您的账号已被封禁{% endif %}
+      </p>
+      <p class="text-xs text-red-600 dark:text-red-400 mb-1">
+        {% if ban_is_direct %}
+        封禁类型：<span class="font-bold">直接封禁</span>（管理员直接操作）
+        {% else %}
+        封禁类型：<span class="font-bold">连带封禁</span>（因上级用户被封禁而受影响）
+        {% endif %}
+      </p>
+      <p class="text-xs text-red-600 dark:text-red-400 mb-1">
+        封禁时间：{{ banned_at|date:"Y年n月j日 H:i" }}
+      </p>
+      <p class="text-xs text-red-600 dark:text-red-400">
+        封禁原因：{{ ban_reason }}
+      </p>
+    </div>
+
+    {% if existing_appeal %}
+    {# Already submitted #}
+    <div class="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 text-center">
+      <p class="text-sm text-amber-700 dark:text-amber-400 font-mono">
+        您已于 {{ existing_appeal.created_at|date:"Y年n月j日 H:i" }} 提交了申诉，请等待管理员处理。
+      </p>
+      <p class="text-xs text-amber-600 dark:text-amber-400 mt-1">每次封禁仅可提交一次申诉。</p>
+    </div>
+    {% else %}
+    {# Appeal form #}
+    <p class="text-xs text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">
+      如果您认为封禁有误，可以在此提交申诉。每次封禁仅可提交一次，请认真填写。
+    </p>
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <div>
+        <label for="content" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">申诉内容</label>
+        <textarea name="content" id="content" rows="5"
+                  class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition resize-none"
+                  placeholder="请说明您的情况..." required></textarea>
+      </div>
+      <button type="submit"
+              class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
+        提交申诉
+      </button>
+    </form>
+    {% endif %}
+
+    <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700 text-center">
+      <a href="{% url 'logout' %}" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">退出登录</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

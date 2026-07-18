@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.sitemaps",
     # Project apps
     "blog",
+    "dashboard",
 ]
 
 MIDDLEWARE = [
@@ -40,6 +41,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "blog.middleware.BanCheckMiddleware",
 ]
 
 ROOT_URLCONF = "my_cosmos.urls"

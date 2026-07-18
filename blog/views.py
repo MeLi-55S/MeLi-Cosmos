@@ -33,7 +33,7 @@ from django.views.generic import (
 
 from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm, CommentForm
 from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin, UserSpaceMixin
-from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment
+from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment, BanAppeal
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1198,3 +1198,52 @@ class MemoDetailView(DetailView):
         context["object_id"] = memo.pk
 
         return context
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Ban Appeal
+# ═══════════════════════════════════════════════════════════════════════════
+
+class BanAppealView(TemplateView):
+    """Appeal form for banned users. One appeal per ban."""
+    template_name = "blog/ban_appeal.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return redirect('login')
+        if not request.user.profile.is_banned:
+            messages.info(request, '您的账号目前没有被封禁。')
+            return redirect('index')
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        profile = self.request.user.profile
+        context['ban_reason'] = profile.banned_reason or '未提供原因'
+        context['is_permanent'] = profile.is_permanent_ban
+        context['banned_at'] = profile.banned_at
+        context['ban_is_direct'] = not profile.banned_reason.startswith('上级用户')
+
+        # Check for existing pending appeal
+        context['existing_appeal'] = BanAppeal.objects.filter(
+            user=self.request.user, is_resolved=False
+        ).first()
+        return context
+
+    def post(self, request, *args, **kwargs):
+        if not request.user.profile.is_banned:
+            return redirect('index')
+
+        existing = BanAppeal.objects.filter(user=request.user, is_resolved=False).first()
+        if existing:
+            messages.warning(request, '您已提交过申诉，请等待处理。')
+            return self.render_to_response(self.get_context_data())
+
+        content = request.POST.get('content', '').strip()
+        if not content:
+            messages.error(request, '申诉内容不能为空。')
+            return self.render_to_response(self.get_context_data())
+
+        BanAppeal.objects.create(user=request.user, content=content)
+        messages.success(request, '申诉已提交，管理员将尽快处理。')
+        return redirect('ban_appeal')

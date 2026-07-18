@@ -158,6 +158,14 @@ class UserProfile(models.Model):
     website = models.URLField('个人网站', max_length=500, blank=True)
     github = models.URLField('GitHub', max_length=500, blank=True)
     mastodon = models.URLField('Mastodon', max_length=500, blank=True)
+    # Ban system
+    is_banned = models.BooleanField('是否封禁', default=False)
+    is_permanent_ban = models.BooleanField('永久封禁', default=False,
+        help_text='永久封禁不受递归解封影响，只能直接取消')
+    banned_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='banned_users', verbose_name='封禁执行人')
+    banned_reason = models.TextField('封禁原因', blank=True)
+    banned_at = models.DateTimeField('封禁时间', null=True, blank=True)
 
     class Meta:
         verbose_name = '用户资料'
@@ -194,6 +202,31 @@ class InviteCode(models.Model):
     @classmethod
     def generate_code(cls):
         return os.urandom(16).hex()
+
+
+class BanAppeal(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='申诉用户')
+    content = models.TextField('申诉内容')
+    created_at = models.DateTimeField('提交时间', auto_now_add=True)
+    is_resolved = models.BooleanField('是否已处理', default=False)
+    resolved_at = models.DateTimeField('处理时间', null=True, blank=True)
+    resolved_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='resolved_appeals', verbose_name='处理人')
+
+    class Meta:
+        verbose_name = '封禁申诉'
+        verbose_name_plural = verbose_name
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user'],
+                condition=models.Q(is_resolved=False),
+                name='unique_pending_appeal_per_user',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} 的申诉'
 
 
 def upload_image_path(instance, filename):
