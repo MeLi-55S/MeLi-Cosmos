@@ -57,7 +57,7 @@
             <div class="flex flex-wrap gap-4 text-xs text-slate-400 dark:text-slate-400 font-mono">
                 <span>📅 发布于 {{ post.created_time|date:"Y年n月j日" }}</span>
                 <span>⏱️ 阅读时间 {{ read_time }} 分钟</span>
-                <span>👁️ 浏览 {{ post.views }} 次</span>
+                <span>👁️ 浏览 <span data-view-count>{{ post.views }}</span> 次</span>
                 <span>🔑 UUID: {{ post.unique_id|truncatechars:24 }}</span>
             </div>
         </header>
@@ -192,4 +192,71 @@
     {% endif %}
 
 </div>
+
+{% block extra_js %}
+<script>
+{% if post %}
+(function() {
+    var postId = {{ post.pk }};
+
+    function collectComponents() {
+        var parts = [
+            navigator.userAgent,
+            navigator.language,
+            screen.width + 'x' + screen.height + 'x' + screen.colorDepth,
+            navigator.hardwareConcurrency || 'unknown',
+            navigator.platform,
+            Intl.DateTimeFormat().resolvedOptions().timeZone,
+        ];
+        try {
+            var c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 64;
+            var ctx = c.getContext('2d');
+            ctx.textBaseline = 'top';
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#f44242';
+            ctx.fillRect(0, 0, 256, 64);
+            ctx.fillStyle = '#000';
+            ctx.font = '16px Georgia';
+            ctx.fillText('MeLi Cosmos', 2, 2);
+            ctx.fillStyle = '#444';
+            ctx.font = '12px monospace';
+            ctx.fillText(navigator.userAgent, 2, 25);
+            parts.push(c.toDataURL());
+        } catch (_) {
+            parts.push('canvas-err');
+        }
+        return parts.join('|||');
+    }
+
+    crypto.subtle.digest('SHA-256', new TextEncoder().encode(collectComponents()))
+        .then(function(buf) {
+            var hash = Array.from(new Uint8Array(buf))
+                .map(function(b) { return b.toString(16).padStart(2, '0'); })
+                .join('');
+            return hash;
+        })
+        .then(function(fingerprint) {
+            return fetch('/ajax/view/', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({post_id: postId, fingerprint: fingerprint})
+            });
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.counted) {
+                var el = document.querySelector('[data-view-count]');
+                if (el) {
+                    var n = parseInt(el.textContent, 10);
+                    if (!isNaN(n)) el.textContent = n + 1;
+                }
+            }
+        })
+        .catch(function() {});
+})();
+{% endif %}
+</script>
+{% endblock %}
 {% endblock %}

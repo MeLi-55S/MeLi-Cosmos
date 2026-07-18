@@ -219,6 +219,26 @@ class UploadedImage(models.Model):
         return self.original_filename
 
 
+class ViewLog(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE, verbose_name='文章')
+    fingerprint_hash = models.CharField('浏览器指纹哈希', max_length=64)
+    ip_hash = models.CharField('IP哈希', max_length=64)
+    created_at = models.DateTimeField('访问时间', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '浏览记录'
+        verbose_name_plural = verbose_name
+        indexes = [
+            models.Index(
+                fields=['post', 'fingerprint_hash', 'ip_hash', 'created_at'],
+                name='idx_viewlog_lookup',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.post.title} @ {self.created_at:%Y-%m-%d %H:%M}'
+
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:

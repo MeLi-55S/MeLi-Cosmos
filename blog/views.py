@@ -23,6 +23,7 @@ from django.db.models import F, Q, Sum
 from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.utils import timezone
 from django.views.generic import (
@@ -31,7 +32,7 @@ from django.views.generic import (
 
 from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm
 from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin, UserSpaceMixin
-from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage
+from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -167,12 +168,6 @@ class PostDetailView(DetailView):
             context["related_posts"] = Post.objects.filter(
                 status="published", tags__in=tag_ids
             ).exclude(pk=post.pk).distinct().order_by("-created_time")[:3]
-
-        # Session-based view counting
-        session_key = f"post_viewed_{post.pk}"
-        if not self.request.session.get(session_key):
-            Post.objects.filter(pk=post.pk).update(views=F("views") + 1)
-            self.request.session[session_key] = True
 
         return context
 
@@ -364,6 +359,26 @@ class ArchivesView(UserSpaceMixin, ListView):
 
 class AboutView(TemplateView):
     template_name = "blog/about.html"
+
+    def get_context_data(self, **kwargs):
+        import platform
+        import time
+        from django.db import connection
+
+        # DB latency
+        start = time.monotonic()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_latency_ms = round((time.monotonic() - start) * 1000, 2)
+
+        context = super().get_context_data(**kwargs)
+        context["status"] = {
+            "hostname": getattr(settings, "SERVER_DISPLAY_NAME", "") or platform.node(),
+            "python_version": platform.python_version(),
+            "db_latency_ms": db_latency_ms,
+            "db_engine": connection.settings_dict["ENGINE"].split(".")[-1],
+        }
+        return context
 
 
 class SeriesCreateView(LoginRequiredMixin, CreateView):
@@ -727,6 +742,60 @@ class InviteCodeEntryView(TemplateView):
         except InviteCode.DoesNotExist:
             messages.error(request, "无效的邀请码，请检查后重试。")
             return self.render_to_response(self.get_context_data())
+
+
+# ── View Counting ─────────────────────────────────────────────────────
+
+@require_POST
+@csrf_exempt
+def view_count_ajax(request):
+    """Record a post view based on browser fingerprint + IP hash + session."""
+    import json
+    from datetime import timedelta
+
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"counted": False}, status=400)
+
+    post_id = data.get("post_id")
+    fingerprint = data.get("fingerprint", "")
+
+    if not post_id or not fingerprint:
+        return JsonResponse({"counted": False}, status=400)
+
+    x_forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
+    if x_forwarded:
+        ip = x_forwarded.split(",")[0].strip()
+    else:
+        ip = request.META.get("REMOTE_ADDR", "")
+
+    salt = settings.SECRET_KEY
+    ip_hash = hashlib.sha256((salt + ip).encode()).hexdigest()
+
+    # Secondary: session check (AND logic — both must pass)
+    session_key = f"post_viewed_{post_id}"
+    if request.session.get(session_key):
+        return JsonResponse({"counted": False})
+
+    # Primary: fingerprint OR IP cooldown check (either match → block)
+    cooldown_hours = getattr(settings, "VIEW_LOG_COOLDOWN_HOURS", 1)
+    cutoff = timezone.now() - timedelta(hours=cooldown_hours)
+
+    if ViewLog.objects.filter(post_id=post_id, created_at__gte=cutoff).filter(
+        Q(fingerprint_hash=fingerprint) | Q(ip_hash=ip_hash)
+    ).exists():
+        return JsonResponse({"counted": False})
+
+    Post.objects.filter(pk=post_id).update(views=F("views") + 1)
+    ViewLog.objects.create(
+        post_id=post_id,
+        fingerprint_hash=fingerprint,
+        ip_hash=ip_hash,
+    )
+    request.session[session_key] = True
+
+    return JsonResponse({"counted": True})
 
 
 # ── AJAX helpers ──────────────────────────────────────────────────────

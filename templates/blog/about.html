@@ -12,6 +12,30 @@
             这里没有臃肿的第三方 CMS 插件，没有复杂的前端框架，只有纯粹的文字和代码。
         </p>
 
+        {# 服务器状态 #}
+        {% if status %}
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-8">
+            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-1">服务器</p>
+                <p class="text-sm font-mono text-slate-700 dark:text-slate-300 truncate" title="{{ status.hostname }}">{{ status.hostname }}</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-1">Python</p>
+                <p class="text-sm font-mono text-cyan-600 dark:text-cyan-400">{{ status.python_version }}</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-1">数据库</p>
+                <p class="text-sm font-mono text-purple-600 dark:text-purple-400">{{ status.db_engine }}</p>
+            </div>
+            <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-center">
+                <p class="text-xs text-slate-400 dark:text-slate-400 font-mono mb-1">DB 延迟</p>
+                <p class="text-sm font-mono {% if status.db_latency_ms < 5 %}text-green-600 dark:text-green-400{% elif status.db_latency_ms < 20 %}text-amber-600 dark:text-amber-400{% else %}text-red-600 dark:text-red-400{% endif %}">
+                    {{ status.db_latency_ms }} ms
+                </p>
+            </div>
+        </div>
+        {% endif %}
+
         <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono mt-8">🛠️ 技术栈</h2>
         <ul class="space-y-2 ml-4 font-mono text-xs text-slate-500 dark:text-slate-400">
             <li>· <span class="text-cyan-600 dark:text-cyan-400">Django 6.x</span>（Python 3.14+）— 后端框架</li>

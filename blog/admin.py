@@ -3,7 +3,7 @@ MeLi Cosmos v3.0 - Admin Configuration (multi-user).
 """
 from django.contrib import admin
 
-from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode
+from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, ViewLog
 
 
 @admin.register(Category)
@@ -96,3 +96,26 @@ class InviteCodeAdmin(admin.ModelAdmin):
     @admin.display(description="邀请码")
     def code_short(self, obj):
         return obj.code[:16] + "..."
+
+
+@admin.register(ViewLog)
+class ViewLogAdmin(admin.ModelAdmin):
+    list_display = ['post', 'fp_short', 'ip_short', 'created_at']
+    list_filter = ['created_at']
+    date_hierarchy = 'created_at'
+    readonly_fields = ['post', 'fingerprint_hash', 'ip_hash', 'created_at']
+    search_fields = ['post__title']
+
+    @admin.display(description='指纹')
+    def fp_short(self, obj):
+        return obj.fingerprint_hash[:16] + '...'
+
+    @admin.display(description='IP哈希')
+    def ip_short(self, obj):
+        return obj.ip_hash[:16] + '...'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False

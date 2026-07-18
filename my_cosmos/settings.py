@@ -123,6 +123,12 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
 USE_X_FORWARDED_PORT = True
 
+# =============================================================================
+# View Counting
+# =============================================================================
+VIEW_LOG_COOLDOWN_HOURS = 1   # 同一指纹+IP 多久后可重新计数
+VIEW_LOG_RETENTION_DAYS = 90  # 日志保留天数
+
 # Markdown rendering configuration
 MARKDOWN_EXTENSIONS = [
     "extra",
@@ -131,3 +137,8 @@ MARKDOWN_EXTENSIONS = [
     "toc",
     "nl2br",
 ]
+
+# =============================================================================
+# Server Identity
+# =============================================================================
+SERVER_DISPLAY_NAME = os.environ.get("SERVER_DISPLAY_NAME", "")  # 关于页面的服务器标识，留空则回退到 hostname
