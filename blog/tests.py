@@ -497,17 +497,17 @@ class ThemeSystemTests(TestCase):
         """Nav 背景和边框使用双主题 class。"""
         html = self._get_html()
         self.assertIn('dark:bg-[#050a14]/60', html)
-        self.assertIn('dark:border-slate-900', html)
+        self.assertIn('dark:border-slate-700', html)
 
     def test_footer_has_dual_theme_classes(self):
         """Footer 使用双主题 class。"""
         html = self._get_html()
-        self.assertIn('dark:border-slate-900 py-8 font-mono', html)
+        self.assertIn('dark:border-slate-700 py-8 font-mono', html)
 
     def test_index_values_banner_dual_theme(self):
         """首页价值声明使用双主题 class。"""
         html = self._get_html()
-        self.assertIn('dark:text-slate-500 text-center', html)
+        self.assertIn('dark:text-slate-400 text-center', html)
 
     def test_no_stale_dark_only_bg_in_templates(self):
         """模板中不应出现旧的纯深色背景（无 light 兜底）。"""

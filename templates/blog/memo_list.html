@@ -30,6 +30,8 @@
                 </p>
             </div>
             <span class="text-xs text-slate-400 dark:text-slate-400 font-mono flex-shrink-0">{{ memo.created_time|date:"Y年n月j日 H:i" }}</span>
+            <a href="{% url 'memo_detail' username=memo.author.username pk=memo.pk %}"
+               class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition flex-shrink-0">详情</a>
         </div>
         {% empty %}
         <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-12 text-center">

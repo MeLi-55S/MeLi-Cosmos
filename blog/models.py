@@ -6,6 +6,8 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.utils import timezone
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.contrib.contenttypes.models import ContentType
 
 
 class Category(models.Model):
@@ -237,6 +239,51 @@ class ViewLog(models.Model):
 
     def __str__(self):
         return f'{self.post.title} @ {self.created_at:%Y-%m-%d %H:%M}'
+
+
+class Like(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='用户')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    created_time = models.DateTimeField('点赞时间', auto_now_add=True)
+
+    class Meta:
+        verbose_name = '点赞'
+        verbose_name_plural = verbose_name
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'content_type', 'object_id'],
+                name='unique_like_per_user_and_object',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['content_type', 'object_id', '-created_time']),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} 赞了 {self.content_object}'
+
+
+class Comment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='评论者')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    content_object = GenericForeignKey('content_type', 'object_id')
+    content = models.TextField('评论内容')
+    created_time = models.DateTimeField('评论时间', auto_now_add=True)
+    modified_time = models.DateTimeField('修改时间', auto_now=True)
+
+    class Meta:
+        verbose_name = '评论'
+        verbose_name_plural = verbose_name
+        ordering = ['created_time']
+        indexes = [
+            models.Index(fields=['content_type', 'object_id', 'created_time']),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username}: {self.content[:30]}'
 
 
 @receiver(post_save, sender=User)

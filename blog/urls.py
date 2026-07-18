@@ -56,6 +56,7 @@ urlpatterns = [
     path("@<str:username>/archives/", views.ArchivesView.as_view(), name="user_archives"),
     path("@<str:username>/drafts/", views.DraftsView.as_view(), name="user_drafts"),
     path("@<str:username>/memos/", views.UserMemoListView.as_view(), name="user_memo_list"),
+    path("@<str:username>/memo/<int:pk>/", views.MemoDetailView.as_view(), name="memo_detail"),
     path("@<str:username>/feed/", UserPostsFeed(), name="user_rss_feed"),
 
     # ── Global Memo ─────────────────────────────────────────────────
@@ -65,7 +66,11 @@ urlpatterns = [
     # ── Series (create — author is current user) ────────────────────
     path("series/create/", views.SeriesCreateView.as_view(), name="series_create"),
 
+    # ── Comments ────────────────────────────────────────────────────
+    path("comment/create/", views.comment_create, name="comment_create"),
+
     # ── AJAX helpers ─────────────────────────────────────────────────
+    path("ajax/like/toggle/", views.like_toggle_ajax, name="like_toggle_ajax"),
     path("ajax/category/create/", views.category_create_ajax, name="category_create_ajax"),
     path("ajax/series/create/", views.series_create_ajax, name="series_create_ajax"),
     path("ajax/view/", views.view_count_ajax, name="view_count_ajax"),

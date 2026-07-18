@@ -148,6 +148,18 @@
         </div>
         {% endif %}
 
+        {# Like section #}
+        <div class="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
+          <div class="flex items-center gap-3">
+            <button id="like-btn" type="button"
+                    class="text-xl transition {% if user_liked %}text-red-500{% else %}text-slate-400 dark:text-slate-500 hover:text-red-400{% endif %} bg-transparent border-none cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
+                    aria-label="点赞">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="pointer-events-none"><path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"/></svg>
+            </button>
+            <span id="like-display" class="text-xs text-slate-400 dark:text-slate-400">{{ likes_display_text }}</span>
+          </div>
+        </div>
+
         </div>{# /.p-6 md:p-10 #}
     </article>
 
@@ -174,6 +186,11 @@
             </div>
         </div>
     </section>
+
+    {# Comments #}
+    {% with content_type_key="blog.post" object_id=post.pk %}
+      {% include "blog/includes/comments_section.html" %}
+    {% endwith %}
 
     {# 相关文章 #}
     {% if related_posts %}
@@ -258,5 +275,6 @@
 })();
 {% endif %}
 </script>
+{% include "blog/includes/like_js.html" %}
 {% endblock %}
 {% endblock %}

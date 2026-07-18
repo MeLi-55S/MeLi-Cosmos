@@ -3,7 +3,7 @@ MeLi Cosmos v3.0 - Admin Configuration (multi-user).
 """
 from django.contrib import admin
 
-from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, ViewLog
+from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, ViewLog, Like, Comment
 
 
 @admin.register(Category)
@@ -113,6 +113,40 @@ class ViewLogAdmin(admin.ModelAdmin):
     @admin.display(description='IP哈希')
     def ip_short(self, obj):
         return obj.ip_hash[:16] + '...'
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Like)
+class LikeAdmin(admin.ModelAdmin):
+    list_display = ['user', 'content_type', 'object_id', 'created_time']
+    list_filter = ['content_type', 'created_time']
+    search_fields = ['user__username']
+    date_hierarchy = 'created_time'
+    readonly_fields = ['user', 'content_type', 'object_id', 'created_time']
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(Comment)
+class CommentAdmin(admin.ModelAdmin):
+    list_display = ['user', 'content_preview', 'content_type', 'object_id', 'created_time']
+    list_filter = ['content_type', 'created_time']
+    search_fields = ['user__username', 'content']
+    date_hierarchy = 'created_time'
+    readonly_fields = ['user', 'content_type', 'object_id', 'content', 'created_time', 'modified_time']
+
+    @admin.display(description='评论内容')
+    def content_preview(self, obj):
+        return obj.content[:50]
 
     def has_add_permission(self, request):
         return False

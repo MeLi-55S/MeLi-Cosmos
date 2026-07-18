@@ -1,4 +1,5 @@
 {% extends "blog/base.html" %}
+{% load static %}
 
 {% block title %}{{ space_owner.username }} 的空间 - MeLi Cosmos{% endblock %}
 
@@ -34,13 +35,19 @@
             {# Links #}
             <div class="flex flex-wrap gap-2 mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                 {% if space_profile.website %}
-                <a href="{{ space_profile.website }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">🌐 网站</a>
+                <a href="{{ space_profile.website }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                  <img src="{% static 'icons/globe.svg' %}" class="inline-block w-4 h-4 align-text-bottom" alt=""> 网站
+                </a>
                 {% endif %}
                 {% if space_profile.github %}
-                <a href="{{ space_profile.github }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">🐙 GitHub</a>
+                <a href="{{ space_profile.github }}" target="_blank" rel="noopener" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                  <img src="{% static 'icons/github.svg' %}" class="inline-block w-4 h-4 align-text-bottom" alt=""> GitHub
+                </a>
                 {% endif %}
                 {% if space_owner.email %}
-                <a href="mailto:{{ space_owner.email }}" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">📧 邮箱</a>
+                <a href="mailto:{{ space_owner.email }}" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition">
+                  <img src="{% static 'icons/mail.svg' %}" class="inline-block w-4 h-4 align-text-bottom" alt=""> {{ space_owner.email }}
+                </a>
                 {% endif %}
             </div>
         </div>

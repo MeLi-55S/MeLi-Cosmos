@@ -132,6 +132,17 @@ class MemoForm(forms.ModelForm):
         }
 
 
+class CommentForm(forms.Form):
+    content = forms.CharField(
+        label='评论内容',
+        widget=forms.Textarea(attrs={
+            "class": TEXTAREA_CLASS,
+            "rows": 3,
+            "placeholder": "写下你的评论...",
+        }),
+    )
+
+
 class UserProfileForm(forms.ModelForm):
     email = forms.EmailField(
         required=False,

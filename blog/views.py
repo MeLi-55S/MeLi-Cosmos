@@ -17,6 +17,7 @@ from django.contrib.auth import login
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.base import ContentFile
 from django.db import IntegrityError
 from django.db.models import F, Q, Sum
@@ -30,9 +31,48 @@ from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView,
 )
 
-from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm
+from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm, CommentForm
 from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin, UserSpaceMixin
-from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog
+from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Helper functions
+# ═══════════════════════════════════════════════════════════════════════════
+
+def _get_related_posts(post, max_results=3):
+    """Score related posts by category match (+3) and tag overlap (+2 each)."""
+    candidates = Post.objects.filter(
+        status="published"
+    ).exclude(pk=post.pk).select_related("category", "author", "author__profile")
+
+    current_category = post.category
+    current_tag_ids = set(post.tags.values_list("id", flat=True))
+
+    if not current_category and not current_tag_ids:
+        return []
+
+    scored = []
+    for candidate in candidates:
+        score = 0
+        if current_category and candidate.category_id == current_category.pk:
+            score += 3
+        candidate_tag_ids = set(candidate.tags.values_list("id", flat=True))
+        overlap = len(current_tag_ids & candidate_tag_ids)
+        score += overlap * 2
+        if score > 0:
+            scored.append((score, candidate))
+
+    scored.sort(key=lambda x: (-x[0], -x[1].created_time.timestamp()))
+    return [c for _, c in scored[:max_results]]
+
+
+def _format_like_display(names, count):
+    if count == 0:
+        return ""
+    if count <= 2:
+        return "、".join(names) + " 赞了"
+    return f"{names[0]}、{names[1]}等{count}人赞了"
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -163,12 +203,36 @@ class PostDetailView(DetailView):
                     context["series_total"] = len(series_posts)
                     break
 
-        # Related posts
-        tag_ids = post.tags.values_list("id", flat=True)
-        if tag_ids:
-            context["related_posts"] = Post.objects.filter(
-                status="published", tags__in=tag_ids
-            ).exclude(pk=post.pk).distinct().order_by("-created_time")[:3]
+        # Related posts (scored)
+        context["related_posts"] = _get_related_posts(post)
+
+        # Likes
+        ct = ContentType.objects.get_for_model(Post)
+        likes = Like.objects.filter(
+            content_type=ct, object_id=post.pk
+        ).select_related("user__profile")
+        context["likes_count"] = likes.count()
+        context["likes_users"] = [
+            l.user.profile.display_name or l.user.username
+            for l in likes[:2]
+        ]
+        context["likes_display_text"] = _format_like_display(
+            context["likes_users"], context["likes_count"]
+        )
+        if self.request.user.is_authenticated:
+            context["user_liked"] = Like.objects.filter(
+                user=self.request.user, content_type=ct, object_id=post.pk
+            ).exists()
+        else:
+            context["user_liked"] = False
+
+        # Comments
+        context["comments"] = Comment.objects.filter(
+            content_type=ct, object_id=post.pk
+        ).select_related("user__profile")
+        context["comment_form"] = CommentForm()
+        context["content_type_key"] = "blog.post"
+        context["object_id"] = post.pk
 
         return context
 
@@ -968,3 +1032,169 @@ def ping(request):
     """Return empty 204 — used by about page JS to measure RTT."""
     from django.http import HttpResponse
     return HttpResponse(status=204)
+
+
+# ── Like / Comment ────────────────────────────────────────────────────
+
+@require_POST
+def like_toggle_ajax(request):
+    """Toggle a like on any object (Post, Memo). Returns JSON."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "请先登录"}, status=403)
+
+    import json
+    try:
+        data = json.loads(request.body)
+    except (json.JSONDecodeError, AttributeError):
+        return JsonResponse({"error": "无效请求"}, status=400)
+
+    content_type_key = data.get("content_type")
+    object_id = data.get("object_id")
+
+    if not content_type_key or not object_id:
+        return JsonResponse({"error": "缺少参数"}, status=400)
+
+    try:
+        app_label, model = content_type_key.split(".")
+        ct = ContentType.objects.get(app_label=app_label, model=model)
+    except (ValueError, ContentType.DoesNotExist):
+        return JsonResponse({"error": "无效的内容类型"}, status=400)
+
+    # Check visibility
+    obj = ct.get_object_for_this_type(pk=object_id)
+    if hasattr(obj, "status") and obj.status != "published" and obj.author != request.user:
+        return JsonResponse({"error": "无法点赞未发布的内容"}, status=403)
+    if hasattr(obj, "is_public") and not obj.is_public and obj.author != request.user:
+        return JsonResponse({"error": "无法点赞非公开内容"}, status=403)
+
+    like, created = Like.objects.get_or_create(
+        user=request.user,
+        content_type=ct,
+        object_id=object_id,
+    )
+
+    if not created:
+        like.delete()
+
+    count = Like.objects.filter(content_type=ct, object_id=object_id).count()
+
+    if count == 0:
+        display_text = ""
+    else:
+        top_users = Like.objects.filter(
+            content_type=ct, object_id=object_id
+        ).select_related("user__profile").order_by("-created_time")[:2]
+        names = [
+            u.user.profile.display_name or u.user.username
+            for u in top_users
+        ]
+        display_text = _format_like_display(names, count)
+
+    return JsonResponse({
+        "liked": created,
+        "count": count,
+        "display_text": display_text,
+    })
+
+
+@require_POST
+def comment_create(request):
+    """Create a comment on any commentable object. Redirects on success."""
+    if not request.user.is_authenticated:
+        messages.error(request, "请先登录后再评论。")
+        next_url = request.POST.get("next") or "/"
+        return redirect(next_url)
+
+    form = CommentForm(request.POST)
+    next_url = request.POST.get("next") or "/"
+
+    if not form.is_valid():
+        messages.error(request, "评论内容不能为空。")
+        return redirect(next_url)
+
+    content_type_key = request.POST.get("content_type")
+    object_id = request.POST.get("object_id")
+
+    if not content_type_key or not object_id:
+        messages.error(request, "参数错误。")
+        return redirect(next_url)
+
+    try:
+        app_label, model = content_type_key.split(".")
+        ct = ContentType.objects.get(app_label=app_label, model=model)
+        content_object = ct.get_object_for_this_type(pk=object_id)
+    except (ValueError, ContentType.DoesNotExist):
+        messages.error(request, "评论目标不存在。")
+        return redirect(next_url)
+
+    # Visibility check
+    if hasattr(content_object, "is_public") and not content_object.is_public:
+        if getattr(content_object, "author", None) != request.user:
+            messages.error(request, "无法评论非公开内容。")
+            return redirect(next_url)
+    if hasattr(content_object, "status"):
+        if content_object.status != "published" and getattr(content_object, "author", None) != request.user:
+            messages.error(request, "无法评论未发布的内容。")
+            return redirect(next_url)
+
+    Comment.objects.create(
+        user=request.user,
+        content_type=ct,
+        object_id=object_id,
+        content=form.cleaned_data["content"],
+    )
+    messages.success(request, "评论已发布。")
+    return redirect(next_url)
+
+
+class MemoDetailView(DetailView):
+    """Individual memo page with likes and comments."""
+    model = Memo
+    template_name = "blog/memo_detail.html"
+    context_object_name = "memo"
+
+    def get_object(self, queryset=None):
+        username = self.kwargs.get("username")
+        pk = self.kwargs.get("pk")
+        author = get_object_or_404(User, username=username)
+        memo = get_object_or_404(
+            Memo.objects.select_related("author", "author__profile"),
+            pk=pk, author=author,
+        )
+        if not memo.is_public and memo.author != self.request.user:
+            raise Http404("Memo not found")
+        return memo
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        memo = self.object
+        ct = ContentType.objects.get_for_model(Memo)
+
+        # Likes
+        likes = Like.objects.filter(
+            content_type=ct, object_id=memo.pk
+        ).select_related("user__profile")
+        context["likes_count"] = likes.count()
+        context["likes_users"] = [
+            l.user.profile.display_name or l.user.username
+            for l in likes[:2]
+        ]
+        context["likes_display_text"] = _format_like_display(
+            context["likes_users"], context["likes_count"]
+        )
+        if self.request.user.is_authenticated:
+            context["user_liked"] = Like.objects.filter(
+                user=self.request.user, content_type=ct, object_id=memo.pk
+            ).exists()
+        else:
+            context["user_liked"] = False
+
+        # Comments
+        context["comments"] = Comment.objects.filter(
+            content_type=ct, object_id=memo.pk
+        ).select_related("user__profile")
+        context["comment_form"] = CommentForm()
+        context["content_type_key"] = "blog.memo"
+        context["object_id"] = memo.pk
+
+        return context
