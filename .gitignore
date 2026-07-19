@@ -21,3 +21,4 @@ explanations/
 .vscode/
 ARCHITECTURE.md
 tailwindcss-cli
+deploy.sh

@@ -58,6 +58,7 @@ else
     exec uv run gunicorn my_cosmos.wsgi:application \
         --bind "0.0.0.0:${PORT}" \
         --workers "${WORKERS}" \
+        --forwarded-allow-ips "127.0.0.1" \
         --access-logfile - \
         --error-logfile - \
         --log-level info
