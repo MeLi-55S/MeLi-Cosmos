@@ -290,6 +290,16 @@ class PostCreateView(LoginRequiredMixin, CreateView):
     form_class = PostForm
     template_name = "blog/post_form.html"
 
+    def get_initial(self):
+        initial = super().get_initial()
+        series_id = self.request.GET.get("series")
+        if series_id:
+            try:
+                initial["series"] = Series.objects.get(id=series_id, author=self.request.user)
+            except (Series.DoesNotExist, ValueError):
+                pass
+        return initial
+
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
         kwargs["user"] = self.request.user
@@ -629,6 +639,11 @@ class PostBySeriesView(UserSpaceMixin, ListView):
             context["current_index"] = idx + 1
             context["prev_post"] = posts[idx - 1] if idx > 0 else None
             context["next_post"] = posts[idx + 1] if idx < len(posts) - 1 else None
+
+        if self.request.user == self.series_owner:
+            context["author_other_posts"] = Post.objects.filter(
+                author=self.request.user, status="published"
+            ).exclude(series=self.series).only("id", "title").order_by("-created_time")[:50]
 
         return context
 
@@ -983,6 +998,24 @@ def series_create_ajax(request):
         slug=slug, author=request.user, defaults={"name": name}
     )
     return JsonResponse({"id": ser.pk, "name": ser.name, "slug": ser.slug, "created": created})
+
+
+@require_POST
+def series_manage_posts_ajax(request, series_id):
+    """Add or remove a post from a series without touching modified_time."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "请先登录"}, status=403)
+    series = get_object_or_404(Series, id=series_id, author=request.user)
+    action = request.POST.get("action")
+    post_id = request.POST.get("post_id")
+    if action not in ("add", "remove") or not post_id:
+        return JsonResponse({"error": "参数不完整"}, status=400)
+    post = get_object_or_404(Post, id=post_id, author=request.user)
+    if action == "add":
+        Post.objects.filter(pk=post.pk).update(series=series)
+    else:
+        Post.objects.filter(pk=post.pk).update(series=None, series_order=1)
+    return JsonResponse({"ok": True, "action": action, "post_title": post.title})
 
 
 # ── Image Upload helpers ──────────────────────────────────────────────

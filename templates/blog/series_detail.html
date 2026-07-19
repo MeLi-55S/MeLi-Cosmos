@@ -8,7 +8,14 @@
     <div class="lg:w-72 flex-shrink-0">
         <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-lg dark:shadow-2xl lg:sticky lg:top-20">
             <div class="mb-4">
-                <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono">{{ series.name }}</h1>
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono truncate">{{ series.name }}</h1>
+                    {% if user == series_owner %}
+                    <a href="{% url 'post_create' %}?series={{ series.id }}"
+                       class="flex-shrink-0 px-2.5 py-1 bg-purple-100 dark:bg-purple-500/20 border border-purple-300 dark:border-purple-500/40 text-purple-600 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-500/30 transition font-mono text-xs"
+                       title="在此系列下写新文章">写</a>
+                    {% endif %}
+                </div>
                 {% if series.description %}
                 <p class="text-xs text-slate-400 dark:text-slate-400 mt-2 leading-relaxed">{{ series.description }}</p>
                 {% endif %}
@@ -25,15 +32,41 @@
             </div>
 
             {# Post list #}
-            <nav class="space-y-1 max-h-[60vh] overflow-y-auto">
+            <nav class="space-y-1 max-h-[60vh] overflow-y-auto" id="series-post-list">
                 {% for sp in series_posts %}
-                <a href="?post={{ sp.slug }}"
-                   class="block px-3 py-2 rounded-lg text-xs font-mono transition {% if sp == current_post %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-bold{% else %}text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-50 dark:hover:bg-slate-950/40{% endif %}">
-                    <span class="text-slate-400 dark:text-slate-400 mr-2">{{ forloop.counter }}</span>
-                    {{ sp.title|truncatechars:20 }}
-                </a>
+                <div class="flex items-center gap-1 group/item">
+                    <a href="?post={{ sp.slug }}"
+                       class="flex-1 block px-3 py-2 rounded-lg text-xs font-mono transition {% if sp == current_post %}bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 font-bold{% else %}text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-50 dark:hover:bg-slate-950/40{% endif %}">
+                        <span class="text-slate-400 dark:text-slate-400 mr-2">{{ forloop.counter }}</span>
+                        {{ sp.title|truncatechars:20 }}
+                    </a>
+                    {% if user == series_owner %}
+                    <button data-remove-post="{{ sp.id }}"
+                            class="flex-shrink-0 w-5 h-5 rounded text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition opacity-0 group-hover/item:opacity-100 bg-transparent border-none cursor-pointer text-xs p-0 leading-none"
+                            title="从系列中移出">×</button>
+                    {% endif %}
+                </div>
                 {% endfor %}
             </nav>
+
+            {# Management: add existing posts (series author only) #}
+            {% if user == series_owner and author_other_posts %}
+            <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-700">
+                <button id="toggle-add-posts"
+                        class="w-full text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 transition bg-transparent border-none cursor-pointer text-left py-1">
+                    + 添加已有文章
+                </button>
+                <div id="add-posts-dropdown" class="hidden mt-2 space-y-0.5 max-h-40 overflow-y-auto">
+                    {% for p in author_other_posts %}
+                    <button data-add-post="{{ p.id }}"
+                            class="w-full text-left px-2 py-1.5 rounded text-xs font-mono text-slate-500 dark:text-slate-400 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-500/10 transition bg-transparent border-none cursor-pointer"
+                            title="{{ p.title }}">
+                        {{ p.title|truncatechars:24 }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
         </div>
     </div>
 
@@ -116,6 +149,19 @@
     </div>
 </div>
 
+{# ── Modal dialog ── #}
+<div id="confirm-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="modal-backdrop"></div>
+    <div class="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-6 max-w-sm mx-4 transform transition-all">
+        <p id="modal-title" class="text-base font-bold text-slate-900 dark:text-slate-100 font-mono mb-2"></p>
+        <p id="modal-message" class="text-sm text-slate-500 dark:text-slate-400 leading-relaxed"></p>
+        <div class="flex justify-end gap-3 mt-5">
+            <button id="modal-cancel" class="px-4 py-2 text-xs font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer">取消</button>
+            <button id="modal-confirm" class="px-4 py-2 text-xs font-mono text-white bg-purple-500 border border-purple-500 rounded-lg hover:opacity-90 transition cursor-pointer">确认</button>
+        </div>
+    </div>
+</div>
+
 <script>
 (function() {
     var url = new URL(window.location.href);
@@ -128,6 +174,114 @@
         url.searchParams.set('sort', 'desc');
         window.location.href = url.toString();
     });
+
+    // ── Modal helpers ──
+    var modal = document.getElementById('confirm-modal');
+    var modalTitle = document.getElementById('modal-title');
+    var modalMessage = document.getElementById('modal-message');
+    var modalCancel = document.getElementById('modal-cancel');
+    var modalConfirm = document.getElementById('modal-confirm');
+    var modalBackdrop = document.getElementById('modal-backdrop');
+    var modalResolve = null;
+
+    function showModal(title, message, confirmText) {
+        return new Promise(function(resolve) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirm.textContent = confirmText || '确认';
+            modalCancel.classList.remove('hidden');
+            modal.classList.remove('hidden');
+            modalResolve = resolve;
+        });
+    }
+
+    function showAlert(title, message) {
+        return new Promise(function(resolve) {
+            modalTitle.textContent = title;
+            modalMessage.textContent = message;
+            modalConfirm.textContent = '知道了';
+            modalCancel.classList.add('hidden');
+            modal.classList.remove('hidden');
+            modalResolve = resolve;
+        });
+    }
+
+    function hideModal() {
+        modal.classList.add('hidden');
+        if (modalResolve) modalResolve();
+        modalResolve = null;
+    }
+
+    modalConfirm.addEventListener('click', function() {
+        modal.classList.add('hidden');
+        if (modalResolve) modalResolve(true);
+        modalResolve = null;
+    });
+
+    modalCancel.addEventListener('click', function() {
+        modal.classList.add('hidden');
+        if (modalResolve) modalResolve(false);
+        modalResolve = null;
+    });
+
+    modalBackdrop.addEventListener('click', function() {
+        modal.classList.add('hidden');
+        if (modalResolve) modalResolve(false);
+        modalResolve = null;
+    });
+
+    {% if user == series_owner %}
+    var csrf = '{{ csrf_token }}';
+    var manageUrl = '{% url "series_manage_posts_ajax" series.id %}';
+
+    function managePost(postId, action, btn) {
+        btn.disabled = true;
+        fetch(manageUrl, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'action=' + encodeURIComponent(action) + '&post_id=' + encodeURIComponent(postId)
+        }).then(function(r) { return r.json(); }).then(function(data) {
+            if (data.ok) {
+                window.location.reload();
+            } else {
+                showAlert('操作失败', data.error || '未知错误').then(function() { btn.disabled = false; });
+            }
+        }).catch(function() {
+            showAlert('网络错误', '请求未能完成，请稍后重试。').then(function() { btn.disabled = false; });
+        });
+    }
+
+    // Remove post from series
+    document.querySelectorAll('[data-remove-post]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var postId = this.getAttribute('data-remove-post');
+            showModal('移出系列', '将此文章移出该系列？').then(function(confirmed) {
+                if (confirmed) managePost(postId, 'remove', btn);
+            });
+        });
+    });
+
+    // Add post to series
+    document.querySelectorAll('[data-add-post]').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            var postId = this.getAttribute('data-add-post');
+            managePost(postId, 'add', this);
+        });
+    });
+
+    // Toggle add-posts dropdown
+    var toggleBtn = document.getElementById('toggle-add-posts');
+    var dropdown = document.getElementById('add-posts-dropdown');
+    if (toggleBtn && dropdown) {
+        toggleBtn.addEventListener('click', function() {
+            var show = dropdown.classList.contains('hidden');
+            dropdown.classList.toggle('hidden', !show);
+            toggleBtn.textContent = show ? '- 收起' : '+ 添加已有文章';
+        });
+    }
+    {% endif %}
 })();
 </script>
 {% endblock %}
