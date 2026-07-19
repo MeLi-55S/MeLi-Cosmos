@@ -588,7 +588,6 @@ class PostBySeriesView(UserSpaceMixin, ListView):
         if hasattr(self, "space_owner"):
             self.series = get_object_or_404(Series, slug=slug, author=self.space_owner)
             self.series_owner = self.space_owner
-            self.template_name = "blog/includes/user_layout.html"
         else:
             self.series = Series.objects.filter(slug=slug).order_by("pk").first()
             if self.series is None:
