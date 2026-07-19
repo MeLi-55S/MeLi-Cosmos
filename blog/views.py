@@ -590,7 +590,9 @@ class PostBySeriesView(UserSpaceMixin, ListView):
             self.series_owner = self.space_owner
             self.template_name = "blog/includes/user_layout.html"
         else:
-            self.series = get_object_or_404(Series, slug=slug)
+            self.series = Series.objects.filter(slug=slug).order_by("pk").first()
+            if self.series is None:
+                raise Http404(f"No series found with slug '{slug}'")
             self.series_owner = self.series.author
 
         self.sort_order = self.request.GET.get("sort", "asc")

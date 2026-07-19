@@ -28,7 +28,7 @@
         <header class="mb-8 pb-6 border-b border-slate-200 dark:border-slate-700">
             {% if post.series %}
             <div class="text-xs md:text-sm font-mono text-purple-600 dark:text-purple-400 mb-2 tracking-wider font-semibold">
-                <a href="{% url 'post_by_series' series_slug %}" class="hover:text-purple-700 dark:hover:text-purple-300 transition">
+                <a href="{% url 'user_post_by_series' username=post.author.username slug=series_slug %}" class="hover:text-purple-700 dark:hover:text-purple-300 transition">
                     系列：{{ series_name }}
                 </a>
                 <span class="text-slate-400 dark:text-slate-400">（第 {{ series_index }} 篇 / 共 {{ series_total }} 篇）</span>

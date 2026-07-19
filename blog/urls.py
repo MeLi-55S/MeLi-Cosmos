@@ -91,6 +91,5 @@ urlpatterns = [
     path("archives/", views.ArchivesView.as_view(), name="archives"),
     path("tag/<uslug:slug>/", views.PostByTagView.as_view(), name="post_by_tag"),
     path("category/<uslug:slug>/", views.PostByCategoryView.as_view(), name="post_by_category"),
-    path("series/<uslug:slug>/", views.PostBySeriesView.as_view(), name="post_by_series"),
     path("series/", views.SeriesListView.as_view(), name="series_list"),
 ]
