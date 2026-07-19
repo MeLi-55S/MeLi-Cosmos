@@ -1,0 +1,88 @@
+# =============================================================================
+# Nginx Blog 配置参考 (服务器: aliserver)
+# 导出时间: 2026-07-19
+# 相关文件:
+#   /etc/nginx/sites-available/blog          — blog.melichem.cn (HTTPS)
+#   /etc/nginx/sites-available/blog-http     — blog.melichem.cn (HTTP → HTTPS)
+# =============================================================================
+
+# =============================================================================
+# 1. HTTP → HTTPS 重定向 (/etc/nginx/sites-available/blog-http)
+# =============================================================================
+server {
+    listen 80;
+    server_name blog.melichem.cn;
+
+    # 将所有 HTTP 请求永久重定向到 HTTPS
+    return 301 https://$server_name$request_uri;
+}
+
+# =============================================================================
+# 2. HTTPS 服务 (/etc/nginx/sites-available/blog)
+# =============================================================================
+server {
+    listen 7443 ssl proxy_protocol;
+    server_name blog.melichem.cn;
+
+    # SSL 证书路径
+    ssl_certificate /etc/nginx/ssl/melichem.cn/cert.pem;
+    ssl_certificate_key /etc/nginx/ssl/melichem.cn/key.pem;
+
+    # SSL 安全增强
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 10m;
+
+    add_header X-Content-Type-Options nosniff always;
+    add_header X-Frame-Options DENY always;
+
+    # 日志
+    access_log /var/log/nginx/blog_access.log;
+    error_log  /var/log/nginx/blog_error.log;
+
+    # HSTS 已按需求注释禁用
+    # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # ---- 静态文件由 Nginx 直接托管 ----
+    location /static/ {
+        alias /home/admin/blog/staticfiles/;
+        expires 30d;
+        access_log off;
+    }
+    location /media/ {
+        alias /home/admin/blog/media/;
+        expires 1d;
+    }
+
+    # ---- 动态请求反向代理至 Gunicorn (127.0.0.1:9999) ----
+    location / {
+        proxy_pass http://127.0.0.1:9999;
+
+        # 透传真实客户端信息
+        # 注意: 因为上游启用 proxy_protocol，$remote_addr 始终是 127.0.0.1，
+        # 必须用 $proxy_protocol_addr 获取真实客户端 IP
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $proxy_protocol_addr;
+        proxy_set_header X-Forwarded-For $proxy_protocol_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Port 443;
+
+        # 超时设置
+        proxy_connect_timeout 60s;
+        proxy_read_timeout 60s;
+        proxy_send_timeout 60s;
+
+        # 禁用缓冲（对 SSE 或大文件上传友好）
+        proxy_buffering off;
+
+        client_max_body_size 10M;
+    }
+
+    # 安全加固：禁止访问隐藏文件（如 .env）
+    location ~ /\. {
+        deny all;
+    }
+}
