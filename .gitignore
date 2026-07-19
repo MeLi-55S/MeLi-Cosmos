@@ -19,3 +19,5 @@ explanations/
 .env
 .claude/
 .vscode/
+ARCHITECTURE.md
+tailwindcss-cli

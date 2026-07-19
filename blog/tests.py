@@ -422,15 +422,21 @@ class ThemeSystemTests(TestCase):
         html = self._get_html()
         self.assertIn('<html lang="zh-CN" class="dark">', html)
 
-    def test_style_tag_is_text_tailwindcss(self):
-        """Tailwind CDN 要求 style 标签为 type='text/tailwindcss'。"""
-        html = self._get_html()
-        self.assertIn('<style type="text/tailwindcss">', html)
+    def test_tailwind_css_is_compiled(self):
+        """Tailwind v4 CSS 预编译为静态文件，不再使用浏览器 CDN。"""
+        import os
+        from django.conf import settings
+        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'tailwind.min.css')
+        self.assertTrue(os.path.exists(css_path), 'Missing compiled Tailwind CSS')
 
-    def test_custom_variant_dark_in_style(self):
-        """必须声明 @custom-variant dark 以启用 class 策略。"""
-        html = self._get_html()
-        self.assertIn('@custom-variant dark (&:where(.dark, .dark *));', html)
+    def test_dark_mode_compiled(self):
+        """编译后的 CSS 应包含 dark 变体规则（CLI 已处理 @custom-variant）。"""
+        import os
+        from django.conf import settings
+        css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'tailwind.min.css')
+        with open(css_path) as f:
+            content = f.read()
+        self.assertIn('.dark\\:', content)
 
     # ── 反闪烁脚本 ──────────────────────────────────────────────
 

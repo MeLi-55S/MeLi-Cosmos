@@ -34,11 +34,7 @@
     {# RSS Auto-discovery #}
     <link rel="alternate" type="application/rss+xml" title="MeLi Cosmos RSS 订阅" href="{% url 'rss_feed' %}">
 
-    <script src="{% static 'tailwindcss-browser.js' %}"></script>
-    <style type="text/tailwindcss">
-        @import "tailwindcss";
-        @custom-variant dark (&:where(.dark, .dark *));
-    </style>
+    <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
     <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
     <style>
         body { font-family: 'Inter', sans-serif; }
