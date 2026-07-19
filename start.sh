@@ -59,6 +59,7 @@ else
         --bind "0.0.0.0:${PORT}" \
         --workers "${WORKERS}" \
         --forwarded-allow-ips "127.0.0.1" \
+        --access-logformat '%({x-forwarded-for}i)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"' \
         --access-logfile - \
         --error-logfile - \
         --log-level info
