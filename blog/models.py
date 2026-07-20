@@ -352,6 +352,50 @@ class Comment(models.Model):
         return f'{self.user.username}: {self.content[:30]}'
 
 
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('comment', '评论'),
+        ('reply', '回复'),
+        ('like', '点赞'),
+        ('system', '系统通知'),
+    )
+
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications', verbose_name='接收人')
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='actor_notifications', verbose_name='触发者')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES, verbose_name='通知类型')
+    message = models.TextField(verbose_name='通知内容')
+    is_read = models.BooleanField(default=False, verbose_name='是否已读')
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE, verbose_name='内容类型')
+    object_id = models.PositiveIntegerField(verbose_name='内容ID')
+    content_object = GenericForeignKey('content_type', 'object_id')
+    created_time = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
+
+    class Meta:
+        verbose_name = '通知'
+        verbose_name_plural = '通知'
+        ordering = ['-created_time']
+        indexes = [
+            models.Index(fields=['recipient', '-created_time']),
+            models.Index(fields=['recipient', 'is_read']),
+            models.Index(fields=['content_type', 'object_id']),
+        ]
+
+    def __str__(self):
+        return f'[{self.get_notification_type_display()}] 给 {self.recipient.username}: {self.message[:30]}'
+
+    def get_target_url(self):
+        """Return the URL to the related content object (Post, Memo, etc.)."""
+        obj = self.content_object
+        if obj is None:
+            return None
+        from django.urls import reverse
+        if hasattr(obj, 'slug') and hasattr(obj, 'author'):
+            return reverse('post_detail', kwargs={'username': obj.author.username, 'slug': obj.slug})
+        if hasattr(obj, 'author'):
+            return reverse('memo_detail', kwargs={'username': obj.author.username, 'pk': obj.pk})
+        return None
+
+
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:

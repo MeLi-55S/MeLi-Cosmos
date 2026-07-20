@@ -44,6 +44,10 @@ urlpatterns = [
     path("accounts/profile/edit/", views.UserProfileUpdateView.as_view(), name="profile_edit"),
     path("accounts/profile/setup/", views.ProfileSetupView.as_view(), name="profile_setup"),
     path("accounts/avatar/", views.AvatarUpdateView.as_view(), name="avatar_edit"),
+    path("accounts/inbox/", views.InboxView.as_view(), name="inbox"),
+    path("accounts/inbox/<int:pk>/read/", views.notification_read, name="notification_read"),
+    path("accounts/inbox/<int:pk>/mark-read/", views.notification_mark_read, name="notification_mark_read"),
+    path("accounts/inbox/mark-all-read/", views.notification_mark_all_read, name="notification_mark_all_read"),
 
     # ── Post CRUD (no username prefix — author is the current user) ──
     path("post/create/", views.PostCreateView.as_view(), name="post_create"),

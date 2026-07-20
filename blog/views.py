@@ -36,7 +36,7 @@ from django.views.generic import (
 
 from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm, CommentForm
 from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin, UserSpaceMixin
-from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment, BanAppeal
+from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment, BanAppeal, Notification
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1240,6 +1240,21 @@ def like_toggle_ajax(request):
 
     if not created:
         like.delete()
+    elif hasattr(obj, 'author') and obj.author != request.user:
+        actor_name = request.user.profile.display_name or request.user.username
+        obj_title = getattr(obj, 'title', None)
+        if obj_title:
+            message = f'{actor_name} 赞了你的文章《{obj_title}》'
+        else:
+            message = f'{actor_name} 赞了你的内容'
+        Notification.objects.create(
+            recipient=obj.author,
+            actor=request.user,
+            notification_type='like',
+            message=message,
+            content_type=ct,
+            object_id=object_id,
+        )
 
     count = Like.objects.filter(content_type=ct, object_id=object_id).count()
 
@@ -1320,6 +1335,23 @@ def comment_create(request):
         object_id=object_id,
         content=form.cleaned_data["content"],
     )
+
+    if hasattr(content_object, 'author') and content_object.author != request.user:
+        actor_name = request.user.profile.display_name or request.user.username
+        obj_title = getattr(content_object, 'title', None)
+        if obj_title:
+            message = f'{actor_name} 评论了你的文章《{obj_title}》'
+        else:
+            message = f'{actor_name} 评论了你的内容'
+        Notification.objects.create(
+            recipient=content_object.author,
+            actor=request.user,
+            notification_type='comment',
+            message=message,
+            content_type=ct,
+            object_id=object_id,
+        )
+
     messages.success(request, "评论已发布。")
     return go()
 
@@ -1424,3 +1456,50 @@ class BanAppealView(TemplateView):
         BanAppeal.objects.create(user=request.user, content=content)
         messages.success(request, '申诉已提交，管理员将尽快处理。')
         return redirect('ban_appeal')
+
+
+class InboxView(LoginRequiredMixin, ListView):
+    model = Notification
+    template_name = "blog/inbox.html"
+    context_object_name = "notifications"
+    paginate_by = 20
+
+    def get_queryset(self):
+        return Notification.objects.filter(
+            recipient=self.request.user
+        ).select_related('actor__profile').order_by('-created_time')
+
+
+def notification_read(request, pk):
+    """Mark a notification as read and redirect to its target content."""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+    target_url = notification.get_target_url()
+    if target_url:
+        return redirect(target_url)
+    return redirect('inbox')
+
+
+@require_POST
+def notification_mark_all_read(request):
+    """Mark all of the current user's unread notifications as read."""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    return redirect('inbox')
+
+
+@require_POST
+def notification_mark_read(request, pk):
+    """Mark a single notification as read without redirecting to its target."""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+    return redirect('inbox')

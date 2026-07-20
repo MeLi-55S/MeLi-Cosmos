@@ -5,7 +5,7 @@ from django.contrib import admin, messages
 from django.utils import timezone
 from django.contrib.auth.models import User
 
-from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, ViewLog, Like, Comment, BanAppeal
+from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, ViewLog, Like, Comment, BanAppeal, Notification
 
 
 def _get_invitee_ids(user):
@@ -315,4 +315,23 @@ class BanAppealAdmin(admin.ModelAdmin):
         super().save_model(request, obj, form, change)
 
     def has_add_permission(self, request):
+        return False
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['recipient', 'actor', 'notification_type', 'message_short', 'is_read', 'created_time']
+    list_filter = ['notification_type', 'is_read', 'created_time']
+    search_fields = ['recipient__username', 'actor__username', 'message']
+    date_hierarchy = 'created_time'
+    readonly_fields = ['recipient', 'actor', 'notification_type', 'message', 'is_read', 'created_time', 'content_type', 'object_id']
+
+    @admin.display(description='内容')
+    def message_short(self, obj):
+        return obj.message[:50]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
         return False

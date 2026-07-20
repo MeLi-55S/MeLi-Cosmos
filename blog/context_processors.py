@@ -4,7 +4,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import Memo, Post, UserProfile
+from .models import Memo, Post, UserProfile, Notification
 
 PLATFORM_DEFAULTS = {
     "name": "MeLi Cosmos",
@@ -45,6 +45,9 @@ def profile(request):
             "latest_memos": latest_memos,
             "total_posts": Post.objects.filter(status="published").count(),
             "active_authors": _get_active_authors(),
+            "unread_notifications_count": Notification.objects.filter(
+                recipient=request.user, is_read=False
+            ).count(),
         }
 
     return {
@@ -52,6 +55,7 @@ def profile(request):
         "latest_memos": latest_memos,
         "total_posts": Post.objects.filter(status="published").count(),
         "active_authors": _get_active_authors(),
+        "unread_notifications_count": 0,
     }
 
 

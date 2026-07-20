@@ -1,0 +1,96 @@
+{% extends "blog/base.html" %}
+
+{% block title %}我的信箱 - MeLi Cosmos{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+            📬 我的信箱
+        </h1>
+        <div class="flex items-center gap-3">
+            {% if unread_notifications_count > 0 %}
+            <form method="post" action="{% url 'notification_mark_all_read' %}">
+                {% csrf_token %}
+                <button type="submit" class="text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition bg-transparent border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 cursor-pointer">
+                    全部标为已读
+                </button>
+            </form>
+            <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/10 px-3 py-1.5 rounded-full border border-cyan-200 dark:border-cyan-500/20">
+                {{ unread_notifications_count }} 条未读
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if notifications %}
+    <div class="rounded-xl overflow-hidden">
+        {% for notification in notifications %}
+        <a href="{% url 'notification_read' notification.pk %}" class="flex items-start gap-3 px-4 py-3 transition-colors duration-150 border-b border-slate-100 dark:border-slate-800 last:border-b-0 {% if not notification.is_read %}bg-cyan-50/50 dark:bg-cyan-500/[0.08] border-l-[3px] border-l-cyan-500{% else %}bg-white dark:bg-slate-950/60 border-l-[3px] border-l-transparent{% endif %}">
+            {% if notification.actor %}
+            <img src="{% if notification.actor.profile.avatar %}{{ notification.actor.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ notification.actor.username }}{% endif %}"
+                 class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 object-cover flex-shrink-0 mt-0.5" alt="{{ notification.actor.username }}" width="32" height="32">
+            {% else %}
+            <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <span class="text-sm">📢</span>
+            </div>
+            {% endif %}
+
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-mono font-bold {% if notification.notification_type == 'system' %}text-purple-600 dark:text-purple-400{% elif notification.notification_type == 'like' %}text-red-600 dark:text-red-400{% elif notification.notification_type == 'comment' %}text-cyan-600 dark:text-cyan-400{% else %}text-slate-500 dark:text-slate-400{% endif %}">
+                        {{ notification.get_notification_type_display }}
+                    </span>
+                    {% if not notification.is_read %}
+                    <span style="position:relative;top:-2px;margin-left:1px" class="w-1.5 h-1.5 rounded-full bg-cyan-500 inline-block shrink-0"></span>
+                    <form method="post" action="{% url 'notification_mark_read' notification.pk %}" class="inline-flex">
+                        {% csrf_token %}
+                        <button type="submit" class="text-xs text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-400 transition font-mono bg-transparent border-none cursor-pointer">标为已读</button>
+                    </form>
+                    {% endif %}
+                    <span class="text-xs text-slate-400 dark:text-slate-500 font-mono ml-auto">
+                        {{ notification.created_time|date:"n月j日 H:i" }}
+                    </span>
+                </div>
+                <p class="text-sm {% if not notification.is_read %}text-slate-700 dark:text-slate-200 font-medium{% else %}text-slate-400 dark:text-slate-500{% endif %} mt-0.5 leading-snug truncate">
+                    {{ notification.message }}
+                </p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-2xl p-16 text-center shadow-lg dark:shadow-2xl">
+        <div class="text-5xl mb-6">📭</div>
+        <h2 class="text-lg font-bold text-slate-700 dark:text-slate-300 mb-3 font-mono">信箱空空如也</h2>
+        <p class="text-sm text-slate-400 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+            当有人评论你的文章、给你的内容点赞或回复时，通知将出现在这里。
+        </p>
+    </div>
+    {% endif %}
+
+    {% if is_paginated %}
+    <div class="flex items-center justify-center space-x-3 pt-6 font-mono text-sm">
+        {% if page_obj.has_previous %}
+        <a href="?page=1"
+           class="px-4 py-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700 transition min-h-[44px] flex items-center">首页</a>
+        <a href="?page={{ page_obj.previous_page_number }}"
+           class="px-4 py-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700 transition min-h-[44px] flex items-center">
+            &larr; 上一页
+        </a>
+        {% endif %}
+        <span class="text-slate-400 dark:text-slate-400">第 {{ page_obj.number }} / {{ page_obj.paginator.num_pages }} 页</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}"
+           class="px-4 py-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700 transition min-h-[44px] flex items-center">
+            下一页 &rarr;
+        </a>
+        <a href="?page={{ page_obj.paginator.num_pages }}"
+           class="px-4 py-2.5 bg-slate-100 dark:bg-slate-900 rounded-xl text-slate-400 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 border border-slate-200 dark:border-slate-700 transition min-h-[44px] flex items-center">末页</a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

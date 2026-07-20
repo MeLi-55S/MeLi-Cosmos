@@ -55,6 +55,9 @@
             <a href="{% url 'user_space' username=user.username %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition" title="我的空间">我的空间</a>
             <a href="{% url 'post_create' %}" class="text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition" title="写文章">写文章</a>
             <a href="{% url 'invite' %}" class="hover:text-purple-600 dark:hover:text-purple-400 transition" title="邀请码">邀请码</a>
+            <a href="{% url 'inbox' %}" class="hover:text-cyan-600 dark:hover:text-cyan-400 transition inline-flex items-center gap-1" title="我的信箱">
+                信箱{% if unread_notifications_count > 0 %}<span style="position:relative;top:-2px" class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block shrink-0"></span>{% endif %}
+            </a>
             <form method="post" action="{% url 'logout' %}" class="inline">
                 {% csrf_token %}
                 <button type="submit" class="hover:text-red-600 dark:hover:text-red-400 transition font-mono text-xs md:text-sm text-slate-500 dark:text-slate-400 bg-transparent border-none cursor-pointer min-h-[44px]">退出</button>
@@ -102,6 +105,12 @@
         {% if user.is_authenticated %}
         <div class="pt-3 border-t border-slate-200 dark:border-slate-700">
             <a href="{% url 'user_space' username=user.username %}" class="block text-sm font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition">我的空间</a>
+            <a href="{% url 'inbox' %}" class="text-sm font-mono text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 transition mt-2 inline-flex items-center gap-1">
+                信箱
+                {% if unread_notifications_count > 0 %}
+                <span style="position:relative;top:-2px" class="w-1.5 h-1.5 rounded-full bg-red-500 inline-block shrink-0"></span>
+                {% endif %}
+            </a>
             <a href="{% url 'invite' %}" class="block text-sm font-mono text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 transition mt-2">邀请码</a>
             <a href="{% url 'profile_edit' %}" class="block text-sm font-mono text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition mt-2">编辑资料</a>
             <form method="post" action="{% url 'logout' %}" class="mt-2">

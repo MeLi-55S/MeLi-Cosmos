@@ -6,9 +6,10 @@ from datetime import date, timedelta
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
+from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, UploadedImage
+from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, UploadedImage, Notification
 
 
 class CategoryModelTests(TestCase):
@@ -764,3 +765,218 @@ class ImageUploadTests(TestCase):
         self.assertContains(resp, 'id="image-upload-btn"')
         self.assertContains(resp, 'id="image-file-input"')
         self.assertContains(resp, '/ajax/image/upload/')
+
+
+class NotificationTests(TestCase):
+    """Test notification creation, read/unread, and context processor."""
+
+    def setUp(self):
+        self.client = Client()
+        self.author = User.objects.create_user(username="post_author", password="pw")
+        self.reader = User.objects.create_user(username="reader", password="pw")
+        self.post = Post.objects.create(
+            title="测试文章",
+            author=self.author,
+            body="文章正文内容",
+            status="published",
+        )
+        self.ct = ContentType.objects.get_for_model(Post)
+
+    def _like_post(self, user):
+        self.client.login(username=user.username, password="pw")
+        import json
+        return self.client.post(
+            reverse("like_toggle_ajax"),
+            data=json.dumps({"content_type": "blog.post", "object_id": self.post.pk}),
+            content_type="application/json",
+        )
+
+    def _comment_post(self, user):
+        self.client.login(username=user.username, password="pw")
+        return self.client.post(
+            reverse("comment_create"),
+            data={
+                "content_type": "blog.post",
+                "object_id": self.post.pk,
+                "content": "写得真好！",
+                "next": reverse("post_detail", kwargs={"username": self.author.username, "slug": self.post.slug}),
+            },
+        )
+
+    # ── Like notifications ──────────────────────────────────────────
+
+    def test_like_creates_notification_for_author(self):
+        """Reader liking author's post creates a notification."""
+        self._like_post(self.reader)
+        self.assertEqual(Notification.objects.count(), 1)
+        notif = Notification.objects.first()
+        self.assertEqual(notif.recipient, self.author)
+        self.assertEqual(notif.actor, self.reader)
+        self.assertEqual(notif.notification_type, "like")
+        self.assertFalse(notif.is_read)
+        self.assertIn("测试文章", notif.message)
+        self.assertIn("reader", notif.message)
+
+    def test_self_like_does_not_create_notification(self):
+        """Author liking their own post should not create a notification."""
+        self._like_post(self.author)
+        self.assertEqual(Notification.objects.count(), 0)
+
+    def test_unlike_does_not_create_notification(self):
+        """Toggling like off should not create a notification."""
+        self._like_post(self.reader)  # like
+        self.assertEqual(Notification.objects.count(), 1)
+        self._like_post(self.reader)  # unlike
+        self.assertEqual(Notification.objects.count(), 1)
+
+    # ── Comment notifications ───────────────────────────────────────
+
+    def test_comment_creates_notification_for_author(self):
+        """Reader commenting on author's post creates a notification."""
+        self._comment_post(self.reader)
+        self.assertEqual(Notification.objects.count(), 1)
+        notif = Notification.objects.first()
+        self.assertEqual(notif.recipient, self.author)
+        self.assertEqual(notif.actor, self.reader)
+        self.assertEqual(notif.notification_type, "comment")
+        self.assertFalse(notif.is_read)
+        self.assertIn("测试文章", notif.message)
+        self.assertIn("reader", notif.message)
+
+    def test_self_comment_does_not_create_notification(self):
+        """Author commenting on their own post should not create a notification."""
+        self._comment_post(self.author)
+        self.assertEqual(Notification.objects.count(), 0)
+
+    # ── Read / mark all read ────────────────────────────────────────
+
+    def test_notification_read_marks_as_read_and_redirects(self):
+        """Clicking a notification marks it read and redirects to the post."""
+        self._like_post(self.reader)
+        notif = Notification.objects.first()
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("notification_read", kwargs={"pk": notif.pk}))
+        notif.refresh_from_db()
+        self.assertTrue(notif.is_read)
+        self.assertRedirects(resp, reverse(
+            "post_detail", kwargs={"username": self.author.username, "slug": self.post.slug},
+        ))
+
+    def test_notification_read_rejects_wrong_recipient(self):
+        """Only the recipient can mark a notification as read."""
+        self._like_post(self.reader)
+        notif = Notification.objects.first()
+        self.client.login(username="reader", password="pw")
+        resp = self.client.get(reverse("notification_read", kwargs={"pk": notif.pk}))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_mark_all_read(self):
+        """Mark all read should update all unread notifications."""
+        post2 = Post.objects.create(title="第二篇", author=self.author, body="内容", status="published")
+        ct = ContentType.objects.get_for_model(Post)
+        self._like_post(self.reader)
+        # Create a second notification manually
+        Notification.objects.create(
+            recipient=self.author, actor=self.reader, notification_type="like",
+            message="reader 赞了你的文章《第二篇》", content_type=ct, object_id=post2.pk,
+        )
+        self.assertEqual(Notification.objects.filter(is_read=False).count(), 2)
+
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.post(reverse("notification_mark_all_read"))
+        self.assertRedirects(resp, reverse("inbox"))
+        self.assertEqual(Notification.objects.filter(is_read=False).count(), 0)
+
+    # ── Context processor ────────────────────────────────────────────
+
+    def test_context_processor_injects_unread_count_for_authenticated(self):
+        """Authenticated user gets unread_notifications_count in context."""
+        self._like_post(self.reader)
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("index"))
+        self.assertEqual(resp.context["unread_notifications_count"], 1)
+
+    def test_context_processor_injects_zero_for_anonymous(self):
+        """Anonymous user gets unread_notifications_count = 0."""
+        resp = self.client.get(reverse("index"))
+        self.assertEqual(resp.context["unread_notifications_count"], 0)
+
+    def test_context_processor_zero_when_all_read(self):
+        """After marking all read, unread count is 0."""
+        self._like_post(self.reader)
+        self.client.login(username="post_author", password="pw")
+        self.client.post(reverse("notification_mark_all_read"))
+        resp = self.client.get(reverse("index"))
+        self.assertEqual(resp.context["unread_notifications_count"], 0)
+
+    # ── Nav rendering ────────────────────────────────────────────────
+
+    def test_nav_red_dot_present_when_unread(self):
+        """Nav renders a red dot when there are unread notifications."""
+        self._like_post(self.reader)
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("index"))
+        self.assertContains(resp, 'inline-flex items-center gap-1')
+        self.assertContains(resp, 'rounded-full bg-red-500')
+
+    def test_nav_red_dot_absent_when_no_unread(self):
+        """Nav does NOT render the red dot when there are no unread notifications."""
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("index"))
+        self.assertNotContains(resp, 'rounded-full bg-red-500')
+
+    # ── Inbox page ───────────────────────────────────────────────────
+
+    def test_inbox_requires_login(self):
+        """Inbox should redirect anonymous users to login."""
+        resp = self.client.get(reverse("inbox"))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_inbox_renders_for_authenticated(self):
+        """Authenticated user can access inbox."""
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("inbox"))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_inbox_shows_notifications(self):
+        """Inbox lists notifications for the current user."""
+        self._like_post(self.reader)
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("inbox"))
+        self.assertContains(resp, "测试文章")
+
+    def test_inbox_empty_state(self):
+        """Empty inbox shows the empty state message."""
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("inbox"))
+        self.assertContains(resp, "信箱空空如也")
+
+    def test_inbox_shows_mark_all_read_button_when_unread(self):
+        """Mark all read button appears when there are unread notifications."""
+        self._like_post(self.reader)
+        self.client.login(username="post_author", password="pw")
+        resp = self.client.get(reverse("inbox"))
+        self.assertContains(resp, "全部标为已读")
+
+    # ── get_target_url ───────────────────────────────────────────────
+
+    def test_get_target_url_for_post(self):
+        """Notification for a post returns the post detail URL."""
+        notif = Notification.objects.create(
+            recipient=self.author, actor=self.reader, notification_type="like",
+            message="reader 赞了你的文章《测试文章》",
+            content_type=self.ct, object_id=self.post.pk,
+        )
+        expected = reverse("post_detail", kwargs={"username": self.author.username, "slug": self.post.slug})
+        self.assertEqual(notif.get_target_url(), expected)
+
+    def test_get_target_url_for_memo(self):
+        """Notification for a memo returns the memo detail URL."""
+        memo = Memo.objects.create(content="Test memo", is_public=True, author=self.author)
+        ct = ContentType.objects.get_for_model(Memo)
+        notif = Notification.objects.create(
+            recipient=self.author, actor=self.reader, notification_type="like",
+            message="...", content_type=ct, object_id=memo.pk,
+        )
+        expected = reverse("memo_detail", kwargs={"username": self.author.username, "pk": memo.pk})
+        self.assertEqual(notif.get_target_url(), expected)
