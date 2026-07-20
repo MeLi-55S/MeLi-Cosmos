@@ -96,7 +96,7 @@
             {% for author in active_authors %}
             <a href="{% url 'user_space' username=author.username %}"
                class="flex items-center gap-2 group">
-                <img src="{% if author.profile.avatar %}{{ author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ author.username }}{% endif %}"
+                <img src="{% if author.profile.avatar %}{{ author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ author.username |urlencode}}{% endif %}"
                      class="w-6 h-6 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover"
                      alt="{{ author.username }}" width="24" height="24">
                 <div class="min-w-0">

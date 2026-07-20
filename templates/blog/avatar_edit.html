@@ -10,7 +10,7 @@
     <div class="mb-6">
         <p class="text-xs font-mono text-slate-500 dark:text-slate-400 mb-3">当前头像</p>
         <img id="current-avatar"
-             src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ user.username }}{% endif %}"
+             src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ user.username |urlencode}}{% endif %}"
              alt="当前头像"
              class="w-32 h-32 rounded-full object-cover border-2 border-slate-200 dark:border-slate-700">
     </div>

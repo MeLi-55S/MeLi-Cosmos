@@ -6,7 +6,7 @@
     {% for comment in comments %}
     <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
       <div class="flex items-start gap-3">
-        <img src="{% if comment.user.profile.avatar %}{{ comment.user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ comment.user.username }}{% endif %}"
+        <img src="{% if comment.user.profile.avatar %}{{ comment.user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ comment.user.username |urlencode}}{% endif %}"
              class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover"
              alt="{{ comment.user.username }}" width="32" height="32">
         <div class="min-w-0 flex-1">

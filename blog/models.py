@@ -413,7 +413,8 @@ def generate_default_avatar(profile):
     from PIL import Image as PILImage
     from django.core.files.base import ContentFile
 
-    url = f"https://api.dicebear.com/7.x/bottts/png?seed={profile.user.username}&size=256"
+    from urllib.parse import quote
+    url = f"https://api.dicebear.com/7.x/bottts/png?seed={quote(profile.user.username)}&size=256"
     try:
         req = Request(url, headers={"User-Agent": "MeLi Cosmos/1.0"})
         with urlopen(req, timeout=5) as resp:

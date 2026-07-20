@@ -40,7 +40,7 @@
 
                 {# 作者归属 — 头像 + 用户名 #}
                 <div class="flex items-center gap-2 mb-3">
-                    <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username }}{% endif %}"
+                    <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username |urlencode}}{% endif %}"
                          class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 object-cover" alt="{{ post.author.username }}" width="20" height="20">
                     <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400 group-hover:text-cyan-700 dark:group-hover:text-cyan-300 transition">@{{ post.author.username }}</span>
                 </div>

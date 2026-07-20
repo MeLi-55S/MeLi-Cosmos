@@ -43,7 +43,7 @@
             {# 作者身份锚点 #}
             <a href="{% url 'user_space' username=post.author.username %}"
                class="inline-flex items-center gap-2 mb-3 group/author">
-                <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username }}{% endif %}"
+                <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username |urlencode}}{% endif %}"
                      class="w-6 h-6 rounded-full border border-slate-300 dark:border-slate-700 group-hover/author:border-cyan-400 dark:group-hover/author:border-cyan-500/50 transition object-cover"
                      alt="{{ post.author.username }}" width="24" height="24">
                 <span class="text-sm font-mono text-cyan-600 dark:text-cyan-400 group-hover/author:text-cyan-700 dark:group-hover/author:text-cyan-300 transition">
@@ -189,7 +189,7 @@
     {# 关于作者 #}
     <section class="mt-10 pt-6 border-t border-slate-200 dark:border-slate-700">
         <div class="flex items-start gap-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
-            <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username }}{% endif %}"
+            <img src="{% if post.author.profile.avatar %}{{ post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ post.author.username |urlencode}}{% endif %}"
                  class="w-12 h-12 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover"
                  alt="{{ post.author.username }}" width="48" height="48">
             <div class="min-w-0">

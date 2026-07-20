@@ -12,7 +12,7 @@
             <div class="flex items-center gap-4">
                 <div class="relative flex-shrink-0">
                     <div class="absolute inset-0 bg-gradient-to-r from-cyan-500 to-indigo-500 rounded-full blur opacity-40"></div>
-                    <img src="{% if space_profile.avatar %}{{ space_profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ space_owner.username }}{% endif %}" alt="头像" class="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-full border-2 border-slate-200 dark:border-slate-700 relative z-10 object-cover">
+                    <img src="{% if space_profile.avatar %}{{ space_profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ space_owner.username |urlencode}}{% endif %}" alt="头像" class="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-full border-2 border-slate-200 dark:border-slate-700 relative z-10 object-cover">
                 </div>
                 <div class="min-w-0">
                     <h1 class="text-xl font-bold text-slate-900 dark:text-slate-100 font-mono">@{{ space_owner.username }}</h1>

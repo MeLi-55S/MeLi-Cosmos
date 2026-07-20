@@ -13,7 +13,7 @@
     {% for memo in memos %}
     <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex items-start justify-between gap-4">
         <div class="flex items-start space-x-3 min-w-0">
-            <img src="{% if memo.author.profile.avatar %}{{ memo.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ memo.author.username }}{% endif %}" class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover" alt="" width="32" height="32">
+            <img src="{% if memo.author.profile.avatar %}{{ memo.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ memo.author.username |urlencode}}{% endif %}" class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover" alt="" width="32" height="32">
             <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words">
                 {% if not memo.is_public %}
                 <span class="text-amber-600 dark:text-amber-500 font-mono text-xs mr-1">[仅自己可见]</span>

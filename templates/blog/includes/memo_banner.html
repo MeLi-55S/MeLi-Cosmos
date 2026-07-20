@@ -7,7 +7,7 @@
     <div class="space-y-3">
         {% for memo in latest_memos %}
         <div class="flex items-start gap-3">
-            <img src="{% if memo.author.profile.avatar %}{{ memo.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ memo.author.username }}{% endif %}"
+            <img src="{% if memo.author.profile.avatar %}{{ memo.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ memo.author.username |urlencode}}{% endif %}"
                  class="w-7 h-7 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 mt-0.5 object-cover"
                  alt="" width="28" height="28">
             <div class="text-xs font-mono min-w-0">

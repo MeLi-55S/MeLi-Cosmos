@@ -86,7 +86,7 @@
 
             <header class="mb-6 pb-4 border-b border-slate-200 dark:border-slate-700">
                 <div class="flex items-center gap-2 mb-2">
-                    <img src="{% if current_post.author.profile.avatar %}{{ current_post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ current_post.author.username }}{% endif %}"
+                    <img src="{% if current_post.author.profile.avatar %}{{ current_post.author.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ current_post.author.username |urlencode}}{% endif %}"
                          class="w-5 h-5 rounded-full border border-slate-300 dark:border-slate-700 object-cover"
                          alt="" width="20" height="20">
                     <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400">@{{ current_post.author.username }}</span>

@@ -1,4 +1,5 @@
 from datetime import timedelta
+from urllib.parse import quote
 
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
@@ -28,7 +29,7 @@ def profile(request):
         avatar_src = (
             user_profile.avatar.url
             if user_profile.avatar
-            else f"https://api.dicebear.com/7.x/bottts/png?seed={request.user.username}"
+            else f"https://api.dicebear.com/7.x/bottts/png?seed={quote(request.user.username)}"
         )
         return {
             "profile": {
