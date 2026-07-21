@@ -51,6 +51,10 @@ server {
         expires 30d;
         access_log off;
     }
+    location = /robots.txt {
+        alias /home/admin/blog/staticfiles/robots.txt;
+        access_log off;
+    }
     location /media/ {
         alias /home/admin/blog/media/;
         expires 1d;
