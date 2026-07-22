@@ -35,11 +35,18 @@
     <link rel="alternate" type="application/rss+xml" title="MeLi Cosmos RSS 订阅" href="{% url 'rss_feed' %}">
 
     <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
-    <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
-    <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/light/result.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/regular/result.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/semibold/result.css' %}?v=1">
-    <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/bold/result.css' %}?v=1">
+    <link rel="preload" href="{% static 'fonts/fonts.css' %}" as="style" onload="this.rel='stylesheet'">
+    <link rel="preload" href="{% static 'fonts/sarasa-chunks/regular/result.css' %}?v=1" as="style" onload="this.rel='stylesheet'">
+    <link rel="preload" href="{% static 'fonts/sarasa-chunks/bold/result.css' %}?v=1" as="style" onload="this.rel='stylesheet'">
+    <link rel="preload" href="{% static 'fonts/sarasa-chunks/light/result.css' %}?v=1" as="style" onload="this.rel='stylesheet'">
+    <link rel="preload" href="{% static 'fonts/sarasa-chunks/semibold/result.css' %}?v=1" as="style" onload="this.rel='stylesheet'">
+    <noscript>
+      <link rel="stylesheet" href="{% static 'fonts/fonts.css' %}">
+      <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/regular/result.css' %}?v=1">
+      <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/bold/result.css' %}?v=1">
+      <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/light/result.css' %}?v=1">
+      <link rel="stylesheet" href="{% static 'fonts/sarasa-chunks/semibold/result.css' %}?v=1">
+    </noscript>
     <style>
         body { font-family: 'Inter', 'Sarasa UI SC', sans-serif; }
         code, pre { font-family: 'JetBrains Mono', monospace; }

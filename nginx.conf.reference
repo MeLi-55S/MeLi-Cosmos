@@ -45,11 +45,21 @@ server {
     # HSTS 已按需求注释禁用
     # add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
+    # ---- 压缩 (Brotli 优先, gzip 降级) ----
+    brotli on;
+    brotli_comp_level 6;
+    brotli_types text/css application/javascript text/html text/plain application/xml image/svg+xml;
+    gzip on;
+    gzip_types text/css application/javascript text/html text/plain application/xml;
+    gzip_vary on;
+
     # ---- 静态文件由 Nginx 直接托管 ----
     location /static/ {
         alias /home/admin/blog/staticfiles/;
         expires 30d;
         access_log off;
+        # 禁止提供字体拆分工具的元数据文件
+        location ~* \.bin$ { deny all; }
     }
     location = /robots.txt {
         alias /home/admin/blog/staticfiles/robots.txt;

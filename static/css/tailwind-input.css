@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../../templates/";
+@source "../../dashboard/templates/";
 @custom-variant dark (&:where(.dark, .dark *));
 
 @layer base {
