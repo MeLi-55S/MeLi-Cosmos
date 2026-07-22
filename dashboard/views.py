@@ -88,6 +88,7 @@ def dashboard(request):
     total_memos = Memo.objects.count()
     total_likes = Like.objects.count()
     total_comments = Comment.objects.count()
+    pending_comments = Comment.objects.filter(is_visible=False).count()
     total_views = Post.objects.aggregate(s=Sum('views'))['s'] or 0
 
     week_ago = timezone.now() - timedelta(days=7)
@@ -96,6 +97,8 @@ def dashboard(request):
     users_7d = User.objects.filter(date_joined__gte=week_ago).count()
 
     appeals = BanAppeal.objects.filter(is_resolved=False).select_related('user').order_by('-created_at')
+
+    pending_comment_list = Comment.objects.filter(is_visible=False).select_related('user').order_by('-created_time')[:20]
 
     edges, roots, users_map = _build_user_tree()
     tree_html = '<ul class="tree">'
@@ -120,6 +123,7 @@ def dashboard(request):
             'total_memos': total_memos,
             'total_likes': total_likes,
             'total_comments': total_comments,
+            'pending_comments': pending_comments,
             'total_views': total_views,
             'posts_7d': posts_7d,
             'views_7d': views_7d,
@@ -127,6 +131,7 @@ def dashboard(request):
         },
         'appeals': appeals,
         'appeal_count': appeals.count(),
+        'pending_comment_list': pending_comment_list,
         'tree_html': tree_html,
         'tree_user_count': len(users_map),
         'orphan_count': User.objects.exclude(id__in=users_map).filter(is_superuser=False).count(),

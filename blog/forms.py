@@ -136,14 +136,59 @@ class MemoForm(forms.ModelForm):
 
 
 class CommentForm(forms.Form):
+    guest_name = forms.CharField(
+        label='昵称',
+        max_length=50,
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": INPUT_CLASS,
+            "placeholder": "你的昵称",
+        }),
+    )
+    guest_email = forms.EmailField(
+        label='邮箱',
+        max_length=254,
+        required=False,
+        widget=forms.EmailInput(attrs={
+            "class": INPUT_CLASS,
+            "placeholder": "邮箱（不会公开）",
+        }),
+    )
     content = forms.CharField(
         label='评论内容',
+        min_length=2,
+        max_length=2000,
         widget=forms.Textarea(attrs={
             "class": TEXTAREA_CLASS,
             "rows": 3,
             "placeholder": "写下你的评论...",
         }),
     )
+    # Honeypot field — hidden from humans, filled by bots
+    website = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            "class": "hidden",
+            "tabindex": "-1",
+            "autocomplete": "off",
+            "name": "website",
+        }),
+    )
+
+    def __init__(self, *args, is_guest=False, **kwargs):
+        self.is_guest = is_guest
+        super().__init__(*args, **kwargs)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.is_guest:
+            guest_name = (cleaned_data.get('guest_name') or '').strip()
+            guest_email = (cleaned_data.get('guest_email') or '').strip()
+            if not guest_name:
+                self.add_error('guest_name', '请输入昵称')
+            if not guest_email:
+                self.add_error('guest_email', '请输入邮箱')
+        return cleaned_data
 
 
 class UserProfileForm(forms.ModelForm):

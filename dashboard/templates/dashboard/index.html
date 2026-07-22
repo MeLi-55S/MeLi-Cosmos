@@ -101,6 +101,45 @@
     {% endif %}
   </div>
 
+  {# Pending comments #}
+  <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5 mb-8">
+    <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-3">
+      待审核评论
+      {% if pending_comments %}<span class="text-amber-600 dark:text-amber-400">({{ pending_comments }})</span>{% endif %}
+    </h3>
+    {% if pending_comment_list %}
+    <div class="space-y-3">
+      {% for c in pending_comment_list %}
+      <div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3 flex items-start justify-between gap-3">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            {% if c.user %}
+            <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400">@{{ c.user.username }}</span>
+            {% else %}
+            <span class="text-xs font-mono text-purple-600 dark:text-purple-400">🌐 {{ c.guest_name|default:"匿名" }}</span>
+            <span class="text-[10px] text-slate-400">({{ c.guest_email }})</span>
+            {% endif %}
+            <span class="text-xs text-slate-400">{{ c.created_time|date:"m-d H:i" }}</span>
+            <span class="text-[10px] text-slate-400">{{ c.content_type.model }}#{{ c.object_id }}</span>
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{{ c.content|truncatechars:200 }}</p>
+        </div>
+        <div class="flex gap-2 flex-shrink-0">
+          <button onclick="toggleComment({{ c.pk }}, this)"
+                  class="text-xs font-mono px-3 py-1.5 bg-green-100 dark:bg-green-500/20 border border-green-300 dark:border-green-500/40 text-green-700 dark:text-green-400 rounded-lg hover:bg-green-200 dark:hover:bg-green-500/30 transition"
+                  title="通过审核">✓ 通过</button>
+          <a href="/admin/blog/comment/{{ c.pk }}/delete/"
+             class="text-xs font-mono px-3 py-1.5 bg-red-100 dark:bg-red-500/20 border border-red-300 dark:border-red-500/40 text-red-700 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-500/30 transition"
+             title="删除">✗ 删除</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="text-xs text-slate-400 dark:text-slate-400 text-center py-4">暂无待审核评论</p>
+    {% endif %}
+  </div>
+
   {# User tree #}
   <div class="bg-white dark:bg-slate-950/60 border border-slate-200 dark:border-slate-700 rounded-xl p-5">
     <h3 class="text-xs font-mono text-slate-400 dark:text-slate-400 mb-4">用户邀请树 ({{ tree_user_count }} 人)</h3>
@@ -214,4 +253,24 @@ html.dark .pill-ok  { background: #14532d33; color: #4ade80; }
 html.dark .pill-temp { background: #78350f33; color: #fbbf24; }
 html.dark .pill-perm { background: #7f1d1d33; color: #f87171; }
 </style>
+
+<script>
+function toggleComment(commentId, btn) {
+  fetch('/comment/' + commentId + '/toggle-visibility/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+    },
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      const card = btn.closest('.border-slate-200, .border-slate-700');
+      card.style.opacity = '0';
+      card.style.transition = 'opacity 0.3s';
+      setTimeout(() => card.remove(), 300);
+    }
+  });
+}
+</script>
 {% endblock %}

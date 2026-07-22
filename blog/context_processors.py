@@ -5,7 +5,7 @@ from django.contrib.auth.models import User
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import Memo, Post, UserProfile, Notification
+from .models import Memo, Post, UserProfile, Notification, Comment, BanAppeal
 
 PLATFORM_DEFAULTS = {
     "name": "MeLi Cosmos",
@@ -49,6 +49,10 @@ def profile(request):
             "unread_notifications_count": Notification.objects.filter(
                 recipient=request.user, is_read=False
             ).count(),
+            "pending_admin_count": (
+                Comment.objects.filter(is_visible=False).count()
+                + BanAppeal.objects.filter(is_resolved=False).count()
+            ) if request.user.is_staff else 0,
         }
 
     return {

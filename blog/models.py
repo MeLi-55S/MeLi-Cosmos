@@ -1,5 +1,6 @@
 import uuid
 import os
+import hashlib
 
 from django.db import models
 from django.db.models.signals import post_save
@@ -332,11 +333,14 @@ class Like(models.Model):
 
 
 class Comment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='评论者')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name='评论者', null=True, blank=True)
+    guest_name = models.CharField('游客昵称', max_length=50, blank=True)
+    guest_email = models.EmailField('游客邮箱', max_length=254, blank=True)
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
     object_id = models.PositiveIntegerField()
     content_object = GenericForeignKey('content_type', 'object_id')
     content = models.TextField('评论内容')
+    is_visible = models.BooleanField('可见', default=True)
     created_time = models.DateTimeField('评论时间', auto_now_add=True)
     modified_time = models.DateTimeField('修改时间', auto_now=True)
 
@@ -346,10 +350,34 @@ class Comment(models.Model):
         ordering = ['created_time']
         indexes = [
             models.Index(fields=['content_type', 'object_id', 'created_time']),
+            models.Index(fields=['guest_email', 'is_visible']),
+            models.Index(fields=['is_visible']),
         ]
 
+    @property
+    def display_name(self):
+        if self.user:
+            return self.user.profile.display_name or self.user.username
+        return self.guest_name or '匿名'
+
+    @property
+    def display_avatar(self):
+        if self.user and self.user.profile.avatar:
+            return self.user.profile.avatar.url
+        if self.user:
+            from urllib.parse import quote
+            return f'https://api.dicebear.com/7.x/bottts/png?seed={quote(self.user.username)}'
+        # Guest: locally-generated avatar, never calls external API
+        return get_or_create_guest_avatar(self.guest_email, self.guest_name) or self._fallback_avatar()
+
+    @staticmethod
+    def _fallback_avatar():
+        """Last-resort placeholder when avatar generation fails."""
+        return "https://api.dicebear.com/7.x/bottts/png?seed=guest"
+
     def __str__(self):
-        return f'{self.user.username}: {self.content[:30]}'
+        name = self.user.username if self.user else (self.guest_name or '游客')
+        return f'{name}: {self.content[:30]}'
 
 
 class Notification(models.Model):
@@ -444,3 +472,81 @@ def generate_default_avatar(profile):
         save=True,
     )
     return True
+
+
+# ── Guest avatar: fetch from DiceBear API → cache locally → serve directly ──
+# Client never calls the external API; the server does it once and caches the result.
+
+_DICEBEAR_URL = "https://api.dicebear.com/7.x/bottts/png?seed={seed}&size=128"
+
+_GUEST_AVATAR_DIR = os.path.join("avatars", "guests")
+
+
+def _guest_avatar_key(guest_email, guest_name):
+    """Deterministic key for guest avatar file. Same guest → same key."""
+    seed = f"{guest_email}|{guest_name}"
+    return hashlib.sha256(seed.encode("utf-8")).hexdigest()[:16]
+
+
+def _guest_avatar_seed(guest_email, guest_name):
+    """Compose the DiceBear seed: MD5(email) so raw email is never in the URL or filename."""
+    import hashlib as _hashlib
+    raw = (guest_email or "guest") + "|" + (guest_name or "?")
+    return _hashlib.md5(raw.encode("utf-8")).hexdigest()
+
+
+def get_or_create_guest_avatar(guest_email, guest_name):
+    """Fetch a DiceBear avatar on behalf of the guest, convert to WebP, cache
+    locally, return the local URL.  Idempotent — returns existing file path on
+    repeat calls.  Returns None on failure.
+    """
+    if not guest_email:
+        guest_email = ""
+    if not guest_name:
+        guest_name = "?"
+    key = _guest_avatar_key(guest_email, guest_name)
+
+    filename = f"{key}.webp"
+    rel_path = os.path.join(_GUEST_AVATAR_DIR, filename)
+
+    from django.conf import settings
+    full_path = os.path.join(settings.MEDIA_ROOT, rel_path)
+
+    # Already cached — serve local file
+    if os.path.isfile(full_path):
+        return f"{settings.MEDIA_URL}{rel_path}"
+
+    try:
+        from urllib.request import urlopen, Request
+        from urllib.parse import quote
+        from io import BytesIO
+        from PIL import Image as PILImage
+
+        seed = _guest_avatar_seed(guest_email, guest_name)
+        url = _DICEBEAR_URL.format(seed=quote(seed))
+
+        req = Request(url, headers={"User-Agent": "MeLi Cosmos/1.0"})
+        with urlopen(req, timeout=5) as resp:
+            raw = resp.read()
+
+        # Convert PNG → WebP (same pipeline as user avatars)
+        img = PILImage.open(BytesIO(raw))
+        if img.mode in ("RGBA", "P"):
+            rgb = PILImage.new("RGB", img.size, (255, 255, 255))
+            if img.mode == "P":
+                img = img.convert("RGBA")
+            rgb.paste(img, mask=img.split()[-1] if img.mode == "RGBA" else None)
+            img = rgb
+        clean = PILImage.new(img.mode, img.size)
+        clean.putdata(list(img.getdata()))
+        buf = BytesIO()
+        clean.save(buf, format="WEBP", quality=80)
+        webp_data = buf.getvalue()
+
+        os.makedirs(os.path.dirname(full_path), exist_ok=True)
+        with open(full_path, "wb") as f:
+            f.write(webp_data)
+
+        return f"{settings.MEDIA_URL}{rel_path}"
+    except Exception:
+        return None

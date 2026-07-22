@@ -77,6 +77,7 @@ urlpatterns = [
 
     # ── Comments ────────────────────────────────────────────────────
     path("comment/create/", views.comment_create, name="comment_create"),
+    path("comment/<int:pk>/toggle-visibility/", views.comment_toggle_visibility, name="comment_toggle_visibility"),
 
     # ── Safe Browsing ────────────────────────────────────────────────
     path("ajax/check-url/", views.check_url_ajax, name="check_url_ajax"),

@@ -279,21 +279,39 @@ class LikeAdmin(admin.ModelAdmin):
 
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
-    list_display = ['user', 'content_preview', 'content_type', 'object_id', 'created_time']
-    list_filter = ['content_type', 'created_time']
-    search_fields = ['user__username', 'content']
+    list_display = ['display_name_col', 'content_preview', 'content_type', 'object_id', 'is_visible', 'created_time']
+    list_filter = ['content_type', 'is_visible', 'created_time']
+    search_fields = ['user__username', 'guest_name', 'guest_email', 'content']
     date_hierarchy = 'created_time'
-    readonly_fields = ['user', 'content_type', 'object_id', 'content', 'created_time', 'modified_time']
+    readonly_fields = ['user', 'guest_name', 'guest_email', 'content_type', 'object_id', 'content', 'created_time', 'modified_time']
+    actions = ['make_visible', 'make_hidden']
+    list_editable = ['is_visible']
+
+    @admin.display(description='评论者')
+    def display_name_col(self, obj):
+        if obj.user:
+            return f'👤 {obj.user.username}'
+        return f'🌐 {obj.guest_name or "匿名"}'
 
     @admin.display(description='评论内容')
     def content_preview(self, obj):
         return obj.content[:50]
 
+    @admin.action(description='设为可见（通过审核）')
+    def make_visible(self, request, queryset):
+        updated = queryset.update(is_visible=True)
+        self.message_user(request, f'已将 {updated} 条评论设为可见。')
+
+    @admin.action(description='设为隐藏')
+    def make_hidden(self, request, queryset):
+        updated = queryset.update(is_visible=False)
+        self.message_user(request, f'已将 {updated} 条评论设为隐藏。')
+
     def has_add_permission(self, request):
         return False
 
     def has_change_permission(self, request, obj=None):
-        return False
+        return True
 
 
 @admin.register(BanAppeal)

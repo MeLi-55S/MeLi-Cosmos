@@ -1,17 +1,42 @@
-{# Shared comments section. Expects: comments, comment_form, content_type_key, object_id #}
-<section class="mt-10">
+{# Shared comments section. Expects: comments, comment_form, content_type_key, object_id, pending_comment (optional), form_errors_from_session (optional) #}
+<section class="mt-10" id="comments">
   <h3 class="text-sm font-mono text-slate-400 dark:text-slate-400 mb-4">评论 ({{ comments|length }})</h3>
 
   <div class="space-y-4 mb-6">
+    {# Pending comment (审核中) — shown only to the submitter #}
+    {% if pending_comment %}
+    <div class="bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/50 rounded-xl p-4">
+      <div class="flex items-start gap-3">
+        <img src="{{ pending_comment.display_avatar }}"
+             class="w-8 h-8 rounded-full border border-amber-300 dark:border-amber-700 flex-shrink-0 object-cover"
+             alt="{{ pending_comment.display_name }}" width="32" height="32">
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-xs font-mono text-amber-700 dark:text-amber-300">@{{ pending_comment.display_name }}</span>
+            {% if not pending_comment.user %}
+            <span class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded">游客</span>
+            {% endif %}
+            <span class="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.5 rounded">审核中</span>
+            <span class="text-xs text-amber-500 dark:text-amber-500">{{ pending_comment.created_time|date:"Y年n月j日 H:i" }}</span>
+          </div>
+          <p class="text-sm text-amber-700 dark:text-amber-300 leading-relaxed break-words">{{ pending_comment.content }}</p>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
     {% for comment in comments %}
     <div class="bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
       <div class="flex items-start gap-3">
-        <img src="{% if comment.user.profile.avatar %}{{ comment.user.profile.avatar.url }}{% else %}https://api.dicebear.com/7.x/bottts/png?seed={{ comment.user.username |urlencode}}{% endif %}"
+        <img src="{{ comment.display_avatar }}"
              class="w-8 h-8 rounded-full border border-slate-300 dark:border-slate-700 flex-shrink-0 object-cover"
-             alt="{{ comment.user.username }}" width="32" height="32">
+             alt="{{ comment.display_name }}" width="32" height="32">
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 mb-1">
-            <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400">@{{ comment.user.username }}</span>
+            <span class="text-xs font-mono text-cyan-600 dark:text-cyan-400">@{{ comment.display_name }}</span>
+            {% if not comment.user %}
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">游客</span>
+            {% endif %}
             <span class="text-xs text-slate-400 dark:text-slate-400">{{ comment.created_time|date:"Y年n月j日 H:i" }}</span>
           </div>
           <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed break-words">{{ comment.content }}</p>
@@ -19,30 +44,56 @@
       </div>
     </div>
     {% empty %}
+    {% if not pending_comment %}
     <p class="text-xs text-slate-400 dark:text-slate-400 italic text-center py-8">还没有评论，来说点什么吧</p>
+    {% endif %}
     {% endfor %}
   </div>
 
-  {% if user.is_authenticated %}
   <form method="post" action="{% url 'comment_create' %}" class="mt-4">
     {% csrf_token %}
     <input type="hidden" name="content_type" value="{{ content_type_key }}">
     <input type="hidden" name="object_id" value="{{ object_id }}">
     <input type="hidden" name="next" value="{{ request.path }}">
+
+    {% if not user.is_authenticated %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+      <div>
+        {{ comment_form.guest_name }}
+        {% if comment_form.guest_name.errors %}
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ comment_form.guest_name.errors.0 }}</p>
+        {% elif form_errors_from_session.guest_name %}
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form_errors_from_session.guest_name.0 }}</p>
+        {% endif %}
+      </div>
+      <div>
+        {{ comment_form.guest_email }}
+        {% if comment_form.guest_email.errors %}
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ comment_form.guest_email.errors.0 }}</p>
+        {% elif form_errors_from_session.guest_email %}
+        <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form_errors_from_session.guest_email.0 }}</p>
+        {% endif %}
+      </div>
+    </div>
+    {{ comment_form.website }}
+    {% endif %}
+
     <div>
       {{ comment_form.content }}
       {% if comment_form.content.errors %}
       <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ comment_form.content.errors.0 }}</p>
+      {% elif form_errors_from_session.content %}
+      <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form_errors_from_session.content.0 }}</p>
       {% endif %}
     </div>
     <button type="submit"
             class="mt-2 px-5 py-2.5 bg-cyan-100 dark:bg-cyan-500/20 border border-cyan-300 dark:border-cyan-500/40 text-cyan-600 dark:text-cyan-400 rounded-xl hover:bg-cyan-200 dark:hover:bg-cyan-500/30 transition font-mono text-xs min-h-[44px]">
       发表评论
     </button>
+    {% if not user.is_authenticated %}
+    <span class="text-xs text-slate-400 dark:text-slate-400 ml-2">
+      或<a href="{% url 'login' %}?next={{ request.path|urlencode }}" class="text-cyan-600 dark:text-cyan-400 hover:underline ml-0.5">登录</a>
+    </span>
+    {% endif %}
   </form>
-  {% else %}
-  <p class="text-xs text-slate-400 dark:text-slate-400 mt-6">
-    请<a href="{% url 'login' %}?next={{ request.path|urlencode }}" class="text-cyan-600 dark:text-cyan-400 hover:underline">登录</a>后发表评论。
-  </p>
-  {% endif %}
 </section>

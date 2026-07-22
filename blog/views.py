@@ -19,7 +19,9 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.core.cache import cache
 from django.core.files.base import ContentFile
+from django.core.signing import Signer
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import IntegrityError
 from django.db.models import F, Q, Sum
@@ -36,7 +38,7 @@ from django.views.generic import (
 
 from .forms import PostForm, MemoForm, SeriesForm, UserProfileForm, CommentForm
 from .mixins import AuthorRequiredMixin, AuthorOrPublishedMixin, UserSpaceMixin
-from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment, BanAppeal, Notification
+from .models import Post, Memo, Category, Tag, Series, UserProfile, InviteCode, UploadedImage, ViewLog, Like, Comment, BanAppeal, Notification, get_or_create_guest_avatar
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -72,11 +74,79 @@ def _get_related_posts(post, max_results=3):
     return [c for _, c in scored[:max_results]]
 
 
-def _safe_redirect(url, fallback='/'):
-    """Validate redirect URL against allowed hosts to prevent open redirect."""
+def _safe_redirect(url, fallback='/', fragment=''):
+    """Validate redirect URL against allowed hosts to prevent open redirect.
+    Optional fragment is appended after host validation (e.g. '#comments')."""
     if url and url_has_allowed_host_and_scheme(url, allowed_hosts=None):
-        return redirect(url)
-    return redirect(fallback)
+        target = url
+    else:
+        target = fallback
+    if fragment:
+        # Avoid double fragments
+        if '#' not in target:
+            target += fragment
+    return redirect(target)
+
+
+# ── Signed cookie helpers for pending (in-moderation) comments ──
+
+_PENDING_COOKIE_NAME = 'pcids'         # short name keeps cookie small
+_PENDING_COOKIE_MAX_AGE = 60 * 60 * 24 * 30   # 30 days
+_pending_signer = Signer(salt='pending_comments')
+
+def _get_pending_ids_from_cookie(request):
+    """Return a set of pending comment IDs from the signed cookie.
+    Auto-cleans IDs whose comments are now visible (already approved)."""
+    raw = request.COOKIES.get(_PENDING_COOKIE_NAME)
+    if not raw:
+        return set()
+    try:
+        ids_str = _pending_signer.unsign(raw)
+    except Exception:
+        return set()
+    stale = set()
+    valid = set()
+    for s in ids_str.split(','):
+        try:
+            pk = int(s)
+        except (ValueError, TypeError):
+            continue
+        valid.add(pk)
+    if not valid:
+        return valid
+    # Remove IDs that are already approved
+    already_visible = set(
+        Comment.objects.filter(pk__in=valid, is_visible=True)
+        .values_list('pk', flat=True)
+    )
+    valid -= already_visible
+    # Remove IDs that no longer exist (deleted)
+    existing = set(
+        Comment.objects.filter(pk__in=valid)
+        .values_list('pk', flat=True)
+    )
+    valid &= existing
+    return valid
+
+def _set_pending_ids_cookie(response, ids):
+    """Sign the given set of IDs and set the cookie on the response."""
+    if ids:
+        value = _pending_signer.sign(','.join(str(i) for i in sorted(ids, key=int)))
+    else:
+        value = ''
+    response.set_cookie(
+        _PENDING_COOKIE_NAME,
+        value,
+        max_age=_PENDING_COOKIE_MAX_AGE if ids else 0,  # delete cookie if empty
+        httponly=True,
+        samesite='Lax',
+    )
+
+def _add_pending_id_cookie(request, response, comment_id):
+    """Append a comment ID to the pending cookie and set it."""
+    ids = _get_pending_ids_from_cookie(request)
+    ids.add(int(comment_id))
+    _set_pending_ids_cookie(response, ids)
 
 
 def _format_like_display(names, count):
@@ -270,11 +340,33 @@ class PostDetailView(DetailView):
         else:
             context["user_liked"] = False
 
-        # Comments
-        context["comments"] = Comment.objects.filter(
+        # Comments (visible + user's own pending comment)
+        comments = Comment.objects.filter(
             content_type=ct, object_id=post.pk
         ).select_related("user__profile")
-        context["comment_form"] = CommentForm()
+
+        # Show user's own pending comment (if any) with "审核中" badge
+        pending_ids = _get_pending_ids_from_cookie(self.request)
+        if pending_ids:
+            pending = Comment.objects.filter(
+                pk__in=pending_ids, content_type=ct, object_id=post.pk, is_visible=False
+            ).select_related("user__profile").first()
+            if pending:
+                context["pending_comment"] = pending
+
+        context["comments"] = comments.filter(is_visible=True)
+
+        # Recover form data from session (after validation error redirect)
+        form_data = self.request.session.pop('comment_form_data', None)
+        form_errors_session = self.request.session.pop('comment_form_errors', None)
+        if form_data:
+            context["comment_form"] = CommentForm(initial=form_data,
+                                                  is_guest=not self.request.user.is_authenticated)
+            if form_errors_session:
+                context["form_errors_from_session"] = form_errors_session
+        else:
+            context["comment_form"] = CommentForm(is_guest=not self.request.user.is_authenticated)
+
         context["content_type_key"] = "blog.post"
         context["object_id"] = post.pk
 
@@ -1197,6 +1289,39 @@ def ping(request):
 
 # ── Like / Comment ────────────────────────────────────────────────────
 
+def _get_client_ip(request):
+    """Extract client IP from request, handling proxy forwarding."""
+    xff = request.META.get('HTTP_X_FORWARDED_FOR')
+    if xff:
+        return xff.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', '')
+
+
+def _rate_limit_check(key, limit, window=3600):
+    """Simple cache-based rate limiter. Returns (allowed: bool, retry_seconds: int)."""
+    count = cache.get(key, 0)
+    if count >= limit:
+        ttl = cache.ttl(key) or 60
+        return False, max(ttl, 1)
+    if count == 0:
+        cache.set(key, 1, window)
+    else:
+        try:
+            cache.incr(key)
+        except ValueError:
+            cache.set(key, 1, window)
+    return True, 0
+
+
+def _guest_is_trusted(email):
+    """A guest is 'trusted' if they have at least one previously-approved visible comment."""
+    return Comment.objects.filter(
+        guest_email=email,
+        user__isnull=True,
+        is_visible=True,
+    ).exists()
+
+
 @require_POST
 def like_toggle_ajax(request):
     """Toggle a like on any object (Post, Memo). Returns JSON."""
@@ -1279,17 +1404,31 @@ def like_toggle_ajax(request):
 
 @require_POST
 def comment_create(request):
-    """Create a comment on any commentable object. Redirects on success."""
+    """Create a comment. Supports logged-in users and guest commenting."""
     next_url = request.POST.get("next") or "/"
-    go = lambda: _safe_redirect(next_url)
+    go = lambda: _safe_redirect(next_url, fragment='#comments')
 
-    if not request.user.is_authenticated:
-        messages.error(request, "请先登录后再评论。")
+    is_authenticated = request.user.is_authenticated
+
+    form = CommentForm(request.POST, is_guest=not is_authenticated)
+    if not form.is_valid():
+        # Save form data + errors in session so the detail page can restore them
+        request.session['comment_form_data'] = {
+            k: v for k, v in request.POST.items()
+            if k not in ('csrfmiddlewaretoken', 'next')
+        }
+        request.session['comment_form_errors'] = {
+            f: [str(e) for e in errors]
+            for f, errors in form.errors.items()
+        }
+        for field, errors in form.errors.items():
+            for err in errors:
+                messages.error(request, f"评论失败：{err}")
         return go()
 
-    form = CommentForm(request.POST)
-    if not form.is_valid():
-        messages.error(request, "评论内容不能为空。")
+    # Honeypot check — bots fill hidden fields
+    if form.cleaned_data.get("website"):
+        messages.error(request, "评论失败，请重试。")
         return go()
 
     content_type_key = request.POST.get("content_type")
@@ -1307,18 +1446,6 @@ def comment_create(request):
         messages.error(request, "评论目标不存在。")
         return go()
 
-    # Duplicate check: same (user, target, content) within 30s
-    dup = Comment.objects.filter(
-        user=request.user,
-        content_type=ct,
-        object_id=object_id,
-        content=form.cleaned_data["content"],
-        created_time__gte=timezone.now() - timezone.timedelta(seconds=30),
-    ).first()
-    if dup:
-        messages.warning(request, "请勿重复提交评论。")
-        return go()
-
     # Visibility check
     if hasattr(content_object, "is_public") and not content_object.is_public:
         if getattr(content_object, "author", None) != request.user:
@@ -1329,31 +1456,107 @@ def comment_create(request):
             messages.error(request, "无法评论未发布的内容。")
             return go()
 
-    Comment.objects.create(
-        user=request.user,
+    # Rate limiting
+    comment_limit = getattr(settings, 'COMMENT_RATE_LIMIT', 5)
+    if is_authenticated:
+        rate_key = f"comment_rate:user:{request.user.pk}"
+    else:
+        rate_key = f"comment_rate:ip:{_get_client_ip(request)}"
+    allowed, retry = _rate_limit_check(rate_key, comment_limit)
+    if not allowed:
+        minutes = max(1, retry // 60)
+        messages.error(request, f"评论过于频繁，请 {minutes} 分钟后再试。")
+        return go()
+
+    raw_content = form.cleaned_data["content"]
+
+    # Duplicate check: same content for same target within 30s
+    dup_filter = {
+        "content_type": ct,
+        "object_id": object_id,
+        "content": raw_content,
+        "created_time__gte": timezone.now() - timezone.timedelta(seconds=30),
+    }
+    if is_authenticated:
+        dup_filter["user"] = request.user
+    else:
+        dup_filter["guest_email"] = form.cleaned_data.get("guest_email", "")
+        dup_filter["user__isnull"] = True
+    if Comment.objects.filter(**dup_filter).exists():
+        messages.warning(request, "请勿重复提交评论。")
+        return go()
+
+    # Determine moderation status
+    guest_name = ""
+    guest_email = ""
+    is_visible = True
+
+    if is_authenticated:
+        comment_user = request.user
+    else:
+        comment_user = None
+        guest_name = form.cleaned_data["guest_name"].strip()
+        guest_email = form.cleaned_data["guest_email"].strip()
+
+        # First-time guest moderation
+        is_visible = _guest_is_trusted(guest_email)
+
+    comment = Comment.objects.create(
+        user=comment_user,
+        guest_name=guest_name,
+        guest_email=guest_email,
         content_type=ct,
         object_id=object_id,
-        content=form.cleaned_data["content"],
+        content=raw_content,
+        is_visible=is_visible,
     )
 
-    if hasattr(content_object, 'author') and content_object.author != request.user:
+    # Notification for content author (logged-in users only, don't notify self)
+    if is_authenticated and hasattr(content_object, 'author') and content_object.author != request.user:
         actor_name = request.user.profile.display_name or request.user.username
         obj_title = getattr(content_object, 'title', None)
         if obj_title:
-            message = f'{actor_name} 评论了你的文章《{obj_title}》'
+            notify_msg = f'{actor_name} 评论了你的文章《{obj_title}》'
         else:
-            message = f'{actor_name} 评论了你的内容'
+            notify_msg = f'{actor_name} 评论了你的内容'
         Notification.objects.create(
             recipient=content_object.author,
             actor=request.user,
             notification_type='comment',
-            message=message,
+            message=notify_msg,
             content_type=ct,
             object_id=object_id,
         )
 
-    messages.success(request, "评论已发布。")
-    return go()
+    # Generate local avatar for guest comment (idempotent, no-op for logged-in)
+    if not is_authenticated:
+        get_or_create_guest_avatar(guest_email, guest_name)
+
+    response = go()
+    if not is_visible:
+        # Save pending comment ID in signed cookie so the submitter can
+        # always see it with "审核中" badge (persists across browser restarts)
+        _add_pending_id_cookie(request, response, comment.pk)
+        messages.success(request, "评论已提交，审核后将显示。")
+    else:
+        messages.success(request, "评论已发布。")
+    return response
+
+
+def comment_toggle_visibility(request, pk):
+    """Toggle a comment's visibility. Staff only."""
+    if not request.user.is_authenticated or not request.user.is_staff:
+        return JsonResponse({"error": "无权限"}, status=403)
+
+    comment = get_object_or_404(Comment, pk=pk)
+    comment.is_visible = not comment.is_visible
+    comment.save(update_fields=['is_visible', 'modified_time'])
+
+    return JsonResponse({
+        "ok": True,
+        "is_visible": comment.is_visible,
+        "comment_id": comment.pk,
+    })
 
 
 class MemoDetailView(DetailView):
@@ -1398,11 +1601,33 @@ class MemoDetailView(DetailView):
         else:
             context["user_liked"] = False
 
-        # Comments
-        context["comments"] = Comment.objects.filter(
+        # Comments (visible + user's own pending comment)
+        comments = Comment.objects.filter(
             content_type=ct, object_id=memo.pk
         ).select_related("user__profile")
-        context["comment_form"] = CommentForm()
+
+        # Show user's own pending comment (if any) with "审核中" badge
+        pending_ids = _get_pending_ids_from_cookie(self.request)
+        if pending_ids:
+            pending = Comment.objects.filter(
+                pk__in=pending_ids, content_type=ct, object_id=memo.pk, is_visible=False
+            ).select_related("user__profile").first()
+            if pending:
+                context["pending_comment"] = pending
+
+        context["comments"] = comments.filter(is_visible=True)
+
+        # Recover form data from session (after validation error redirect)
+        form_data = self.request.session.pop('comment_form_data', None)
+        form_errors_session = self.request.session.pop('comment_form_errors', None)
+        if form_data:
+            context["comment_form"] = CommentForm(initial=form_data,
+                                                  is_guest=not self.request.user.is_authenticated)
+            if form_errors_session:
+                context["form_errors_from_session"] = form_errors_session
+        else:
+            context["comment_form"] = CommentForm(is_guest=not self.request.user.is_authenticated)
+
         context["content_type_key"] = "blog.memo"
         context["object_id"] = memo.pk
 
