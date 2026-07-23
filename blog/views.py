@@ -23,6 +23,7 @@ from django.core.cache import cache
 from django.core.files.base import ContentFile
 from django.core.signing import Signer
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.utils.text import slugify
 from django.db import IntegrityError
 from django.db.models import F, Q, Sum
 from django.core.exceptions import ObjectDoesNotExist
@@ -1153,6 +1154,91 @@ def _process_image(data):
     buf = BytesIO()
     clean.save(buf, format="WEBP", quality=WEBP_QUALITY)
     return buf.getvalue(), w, h
+
+
+@require_POST
+def post_autosave_ajax(request):
+    """AJAX auto-save: create a new draft or update an existing post."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "请先登录"}, status=401)
+
+    unique_id = request.POST.get("unique_id", "").strip()
+    title = request.POST.get("title", "").strip()
+    body = request.POST.get("body", "")
+    cover = request.POST.get("cover", "").strip()
+    excerpt = request.POST.get("excerpt", "").strip()
+    category_id = request.POST.get("category", "").strip()
+    series_id = request.POST.get("series", "").strip()
+    license_val = request.POST.get("license", "CC BY-NC 4.0").strip()
+    tag_names_raw = request.POST.get("tag_names", "").strip()
+
+    if unique_id:
+        try:
+            post = Post.objects.get(unique_id=unique_id, author=request.user)
+        except Post.DoesNotExist:
+            return JsonResponse({"error": "文章不存在"}, status=404)
+        post.title = title or post.title
+        post.body = body
+        post.cover = cover
+        post.excerpt = excerpt
+        if category_id:
+            try:
+                post.category = Category.objects.get(id=int(category_id), author=request.user)
+            except (Category.DoesNotExist, ValueError):
+                pass
+        else:
+            post.category = None
+        if series_id:
+            try:
+                post.series = Series.objects.get(id=int(series_id), author=request.user)
+            except (Series.DoesNotExist, ValueError):
+                pass
+        else:
+            post.series = None
+        post.license = license_val
+        post.save()
+    else:
+        if not title:
+            title = "未命名草稿"
+        post = Post(
+            author=request.user,
+            title=title,
+            body=body,
+            cover=cover,
+            excerpt=excerpt,
+            license=license_val,
+            status="draft",
+        )
+        if category_id:
+            try:
+                post.category = Category.objects.get(id=int(category_id), author=request.user)
+            except (Category.DoesNotExist, ValueError):
+                pass
+        if series_id:
+            try:
+                post.series = Series.objects.get(id=int(series_id), author=request.user)
+            except (Series.DoesNotExist, ValueError):
+                pass
+        post.save()
+
+    # Sync tags
+    if tag_names_raw:
+        names = [n.strip() for n in tag_names_raw.replace(",", " ").split() if n.strip()]
+        tags = []
+        for name in names:
+            slug = slugify(name, allow_unicode=True)
+            tag, _ = Tag.objects.get_or_create(
+                slug=slug, author=request.user, defaults={"name": name}
+            )
+            tags.append(tag)
+        post.tags.set(tags)
+
+    return JsonResponse({
+        "unique_id": str(post.unique_id),
+        "slug": post.slug,
+        "status": post.status,
+        "edit_url": reverse("post_edit", kwargs={"unique_id": post.unique_id}),
+    })
 
 
 @require_POST

@@ -192,6 +192,174 @@
         })();
         </script>
 
+        {# Auto-save JS #}
+        <script>
+        (function() {
+            var statusEl = document.getElementById('autosave-status');
+            var uuidEl = document.getElementById('autosave-uuid');
+            var autosaveBar = document.getElementById('autosave-bar');
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var formEl = document.querySelector('form');
+            var cancelLink = formEl.querySelector('a[href]');
+
+            // Determine if editing or creating
+            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
+            var isCreate = !uniqueId;
+
+            // Collect form data
+            function collectData() {
+                var fd = new FormData();
+                fd.append('title', document.querySelector('input[name="title"]').value);
+                fd.append('body', document.querySelector('textarea[name="body"]').value);
+                fd.append('cover', document.querySelector('input[name="cover"]').value);
+                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
+                fd.append('category', document.querySelector('select[name="category"]').value);
+                fd.append('series', document.querySelector('select[name="series"]').value);
+                fd.append('license', document.querySelector('select[name="license"]').value);
+                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
+                if (uniqueId) {
+                    fd.append('unique_id', uniqueId);
+                }
+                return fd;
+            }
+
+            // Serialize current form state for dirty-checking
+            var lastSavedState = '';
+            function getCurrentState() {
+                var fd = collectData();
+                var parts = [];
+                // Sort keys for stable comparison
+                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
+                for (var i = 0; i < keys.length; i++) {
+                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
+                }
+                return parts.join('&');
+            }
+
+            var saveTimer = null;
+            var pendingSave = false;
+            var failCount = 0;
+
+            function setStatus(html, isError) {
+                if (!statusEl) return;
+                statusEl.innerHTML = html;
+                if (isError) {
+                    statusEl.classList.add('text-red-500', 'dark:text-red-400');
+                    statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-cyan-600', 'dark:text-cyan-400', 'text-green-500', 'dark:text-green-400');
+                } else {
+                    statusEl.classList.remove('text-red-500', 'dark:text-red-400');
+                }
+            }
+
+            function doSave() {
+                pendingSave = false;
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state === lastSavedState) return; // nothing changed
+
+                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>', false);
+                statusEl.classList.add('text-cyan-600', 'dark:text-cyan-400');
+                statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-green-500', 'dark:text-green-400');
+
+                var fd = collectData();
+                fetch('{% url "post_autosave_ajax" %}', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { throw new Error(data.error); }
+                    lastSavedState = state;
+                    failCount = 0;
+                    var now = new Date();
+                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+                    setStatus('已自动保存 ' + timeStr, false);
+                    statusEl.classList.add('text-green-500', 'dark:text-green-400');
+                    statusEl.classList.remove('text-cyan-600', 'dark:text-cyan-400');
+
+                    // On first create, update uniqueId, form action, and browser URL
+                    if (isCreate && data.unique_id) {
+                        isCreate = false;
+                        uniqueId = data.unique_id;
+                        if (uuidEl) uuidEl.textContent = 'UUID: ' + data.unique_id;
+                        if (uuidEl) uuidEl.classList.remove('hidden');
+                        if (autosaveBar) autosaveBar.classList.add('justify-between');
+                        // Update form action to edit URL
+                        formEl.action = data.edit_url;
+                        // Update cancel link
+                        if (cancelLink) {
+                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
+                        }
+                        // Update browser URL without reload
+                        if (history.replaceState) {
+                            history.replaceState(null, '', data.edit_url);
+                        }
+                        // Update submit button text
+                        var submitBtn = formEl.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.textContent = '保存修改';
+                    }
+
+                    // If submit happens while save in progress, retry
+                    if (pendingSave) scheduleSave();
+                })
+                .catch(function(e) {
+                    failCount++;
+                    var msg = failCount > 1 ? '自动保存失败 (' + failCount + ' 次) — 请检查网络' : '⚠ 自动保存失败 — 请检查网络';
+                    setStatus(msg, true);
+                    // Retry after longer delay on failure
+                    saveTimer = setTimeout(scheduleSave, 10000);
+                });
+            }
+
+            function scheduleSave() {
+                if (saveTimer) clearTimeout(saveTimer);
+                // Only schedule if there are unsaved changes
+                if (getCurrentState() !== lastSavedState) {
+                    saveTimer = setTimeout(doSave, 3000);
+                    pendingSave = true;
+                }
+            }
+
+            // Watch all form fields for changes
+            var watchedFields = [
+                document.querySelector('input[name="title"]'),
+                document.querySelector('textarea[name="body"]'),
+                document.querySelector('input[name="cover"]'),
+                document.querySelector('textarea[name="excerpt"]'),
+                document.querySelector('select[name="category"]'),
+                document.querySelector('select[name="series"]'),
+                document.querySelector('select[name="license"]'),
+            ];
+            watchedFields.forEach(function(el) {
+                if (!el) return;
+                el.addEventListener('input', scheduleSave);
+                el.addEventListener('change', scheduleSave);
+            });
+
+            // Also watch tag hidden input changes via MutationObserver
+            var tagHidden = document.getElementById('tag-names-hidden');
+            if (tagHidden) {
+                var tagObserver = new MutationObserver(function() { scheduleSave(); });
+                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
+            }
+
+            // Save before unload (form submit) — cancel any pending timer and save immediately
+            formEl.addEventListener('submit', function() {
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state !== lastSavedState && uniqueId) {
+                    // Fire-and-forget save before form submission
+                    var fd = collectData();
+                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
+                }
+            });
+
+            // Initialize state
+            lastSavedState = getCurrentState();
+        })();
+        </script>
+
         <script>
         // Inline category & series creation helpers
         var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -248,6 +416,191 @@
         );
         </script>
 
+        {# Auto-save JS #}
+        <script>
+        (function() {
+            var statusEl = document.getElementById('autosave-status');
+            var uuidEl = document.getElementById('autosave-uuid');
+            var autosaveBar = document.getElementById('autosave-bar');
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var formEl = document.querySelector('form');
+            var cancelLink = formEl.querySelector('a[href]');
+
+            // Determine if editing or creating
+            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
+            var isCreate = !uniqueId;
+
+            // Collect form data
+            function collectData() {
+                var fd = new FormData();
+                fd.append('title', document.querySelector('input[name="title"]').value);
+                fd.append('body', document.querySelector('textarea[name="body"]').value);
+                fd.append('cover', document.querySelector('input[name="cover"]').value);
+                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
+                fd.append('category', document.querySelector('select[name="category"]').value);
+                fd.append('series', document.querySelector('select[name="series"]').value);
+                fd.append('license', document.querySelector('select[name="license"]').value);
+                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
+                if (uniqueId) {
+                    fd.append('unique_id', uniqueId);
+                }
+                return fd;
+            }
+
+            // Serialize current form state for dirty-checking
+            var lastSavedState = '';
+            function getCurrentState() {
+                var fd = collectData();
+                var parts = [];
+                // Sort keys for stable comparison
+                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
+                for (var i = 0; i < keys.length; i++) {
+                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
+                }
+                return parts.join('&');
+            }
+
+            var saveTimer = null;
+            var pendingSave = false;
+            var failCount = 0;
+
+            function setStatus(html, isError) {
+                if (!statusEl) return;
+                statusEl.innerHTML = html;
+                if (isError) {
+                    statusEl.classList.add('text-red-500', 'dark:text-red-400');
+                    statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-cyan-600', 'dark:text-cyan-400', 'text-green-500', 'dark:text-green-400');
+                } else {
+                    statusEl.classList.remove('text-red-500', 'dark:text-red-400');
+                }
+            }
+
+            function doSave() {
+                pendingSave = false;
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state === lastSavedState) return; // nothing changed
+
+                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>', false);
+                statusEl.classList.add('text-cyan-600', 'dark:text-cyan-400');
+                statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-green-500', 'dark:text-green-400');
+
+                var fd = collectData();
+                fetch('{% url "post_autosave_ajax" %}', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { throw new Error(data.error); }
+                    lastSavedState = state;
+                    failCount = 0;
+                    var now = new Date();
+                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+                    setStatus('已自动保存 ' + timeStr, false);
+                    statusEl.classList.add('text-green-500', 'dark:text-green-400');
+                    statusEl.classList.remove('text-cyan-600', 'dark:text-cyan-400');
+
+                    // On first create, update uniqueId, form action, and browser URL
+                    if (isCreate && data.unique_id) {
+                        isCreate = false;
+                        uniqueId = data.unique_id;
+                        if (uuidEl) uuidEl.textContent = 'UUID: ' + data.unique_id;
+                        if (uuidEl) uuidEl.classList.remove('hidden');
+                        if (autosaveBar) autosaveBar.classList.add('justify-between');
+                        // Update form action to edit URL
+                        formEl.action = data.edit_url;
+                        // Update cancel link
+                        if (cancelLink) {
+                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
+                        }
+                        // Update browser URL without reload
+                        if (history.replaceState) {
+                            history.replaceState(null, '', data.edit_url);
+                        }
+                        // Update submit button text
+                        var submitBtn = formEl.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.textContent = '保存修改';
+                    }
+
+                    // If submit happens while save in progress, retry
+                    if (pendingSave) scheduleSave();
+                })
+                .catch(function(e) {
+                    failCount++;
+                    var msg = failCount > 1 ? '自动保存失败 (' + failCount + ' 次) — 请检查网络' : '⚠ 自动保存失败 — 请检查网络';
+                    setStatus(msg, true);
+                    // Retry after longer delay on failure
+                    saveTimer = setTimeout(scheduleSave, 10000);
+                });
+            }
+
+            function scheduleSave() {
+                if (saveTimer) clearTimeout(saveTimer);
+                // Only schedule if there are unsaved changes
+                if (getCurrentState() !== lastSavedState) {
+                    saveTimer = setTimeout(doSave, 3000);
+                    pendingSave = true;
+                }
+            }
+
+            // Watch all form fields for changes
+            var watchedFields = [
+                document.querySelector('input[name="title"]'),
+                document.querySelector('textarea[name="body"]'),
+                document.querySelector('input[name="cover"]'),
+                document.querySelector('textarea[name="excerpt"]'),
+                document.querySelector('select[name="category"]'),
+                document.querySelector('select[name="series"]'),
+                document.querySelector('select[name="license"]'),
+            ];
+            watchedFields.forEach(function(el) {
+                if (!el) return;
+                el.addEventListener('input', scheduleSave);
+                el.addEventListener('change', scheduleSave);
+            });
+
+            // Also watch tag hidden input changes via MutationObserver
+            var tagHidden = document.getElementById('tag-names-hidden');
+            if (tagHidden) {
+                var tagObserver = new MutationObserver(function() { scheduleSave(); });
+                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
+            }
+
+            // Save before unload (form submit) — cancel any pending timer and save immediately
+            formEl.addEventListener('submit', function() {
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state !== lastSavedState && uniqueId) {
+                    // Fire-and-forget save before form submission
+                    var fd = collectData();
+                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
+                }
+            });
+
+            // Initialize state
+            lastSavedState = getCurrentState();
+        })();
+        </script>
+
+        {# Alt text prompt modal #}
+        <div id="alt-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 hidden">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4">
+                <h3 class="text-sm font-mono font-bold text-slate-900 dark:text-slate-100 mb-1">为图片添加描述</h3>
+                <p class="text-xs text-slate-400 dark:text-slate-400 mb-4">描述图片内容，有助于 SEO 和无障碍访问</p>
+                <input type="text" id="alt-text-input"
+                       class="w-full bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-900 dark:text-slate-100 text-sm focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition mb-4"
+                       placeholder="输入图片描述……">
+                <div class="flex justify-end gap-3">
+                    <button type="button" id="alt-modal-skip"
+                            class="px-4 py-2 text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border border-slate-300 dark:border-slate-700 rounded-lg cursor-pointer">使用默认</button>
+                    <button type="button" id="alt-modal-confirm"
+                            class="px-4 py-2 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
+                </div>
+            </div>
+        </div>
+
         {# Image upload JS #}
         <script>
         (function() {
@@ -285,6 +638,64 @@
                 if (ok) setTimeout(function() { statusEl.classList.add('hidden'); }, 3000);
             }
 
+            // Strip file extension to get a cleaner default alt (e.g. "screenshot.png" → "screenshot")
+            function defaultAlt(filename) {
+                var i = filename.lastIndexOf('.');
+                return i > 0 ? filename.substring(0, i) : filename;
+            }
+
+            // Alt text modal
+            var altModal = document.getElementById('alt-modal');
+            var altInput = document.getElementById('alt-text-input');
+            var pendingUrl = null;
+            var pendingDefaultAlt = null;
+
+            function showAltModal(url, defaultAltText) {
+                pendingUrl = url;
+                pendingDefaultAlt = defaultAltText;
+                altInput.value = defaultAltText;
+                altModal.classList.remove('hidden');
+                altInput.focus();
+                altInput.select();
+            }
+
+            function hideAltModal() {
+                altModal.classList.add('hidden');
+                pendingUrl = null;
+                pendingDefaultAlt = null;
+            }
+
+            function confirmAlt(useDefault) {
+                var alt = useDefault ? pendingDefaultAlt : (altInput.value.trim() || pendingDefaultAlt);
+                if (!pendingUrl) { hideAltModal(); return; }
+                insertAtCursor('![' + alt + '](' + pendingUrl + ')');
+                showStatus('已插入', true);
+                hideAltModal();
+            }
+
+            document.getElementById('alt-modal-confirm').addEventListener('click', function() {
+                confirmAlt(false);
+            });
+
+            document.getElementById('alt-modal-skip').addEventListener('click', function() {
+                confirmAlt(true);
+            });
+
+            altInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmAlt(false);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    confirmAlt(true);
+                }
+            });
+
+            // Click overlay to dismiss with default alt
+            altModal.addEventListener('click', function(e) {
+                if (e.target === altModal) confirmAlt(true);
+            });
+
             function uploadFile(file) {
                 if (!file.type.match(/^image\//)) {
                     showStatus('文件类型不是图片', false);
@@ -301,8 +712,7 @@
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
                         if (data.error) { showStatus(data.error, false); return; }
-                        insertAtCursor('![' + data.name + '](' + data.url + ')');
-                        showStatus('已插入', true);
+                        showAltModal(data.url, defaultAlt(data.name));
                     })
                     .catch(function() { showStatus('上传失败', false); });
             }
@@ -339,9 +749,339 @@
         })();
         </script>
 
+        {# Auto-save JS #}
+        <script>
+        (function() {
+            var statusEl = document.getElementById('autosave-status');
+            var uuidEl = document.getElementById('autosave-uuid');
+            var autosaveBar = document.getElementById('autosave-bar');
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var formEl = document.querySelector('form');
+            var cancelLink = formEl.querySelector('a[href]');
+
+            // Determine if editing or creating
+            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
+            var isCreate = !uniqueId;
+
+            // Collect form data
+            function collectData() {
+                var fd = new FormData();
+                fd.append('title', document.querySelector('input[name="title"]').value);
+                fd.append('body', document.querySelector('textarea[name="body"]').value);
+                fd.append('cover', document.querySelector('input[name="cover"]').value);
+                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
+                fd.append('category', document.querySelector('select[name="category"]').value);
+                fd.append('series', document.querySelector('select[name="series"]').value);
+                fd.append('license', document.querySelector('select[name="license"]').value);
+                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
+                if (uniqueId) {
+                    fd.append('unique_id', uniqueId);
+                }
+                return fd;
+            }
+
+            // Serialize current form state for dirty-checking
+            var lastSavedState = '';
+            function getCurrentState() {
+                var fd = collectData();
+                var parts = [];
+                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
+                for (var i = 0; i < keys.length; i++) {
+                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
+                }
+                return parts.join('&');
+            }
+
+            var saveTimer = null;
+            var pendingSave = false;
+            var failCount = 0;
+
+            function setStatus(html) {
+                if (!statusEl) return;
+                statusEl.innerHTML = html;
+            }
+
+            function doSave() {
+                pendingSave = false;
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state === lastSavedState) return;
+
+                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>');
+                statusEl.className = 'text-xs font-mono text-cyan-600 dark:text-cyan-400';
+
+                var fd = collectData();
+                fetch('{% url "post_autosave_ajax" %}', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { throw new Error(data.error); }
+                    lastSavedState = state;
+                    failCount = 0;
+                    var now = new Date();
+                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+                    setStatus('已自动保存 ' + timeStr);
+                    statusEl.className = 'text-xs font-mono text-green-500 dark:text-green-400';
+
+                    // On first create, update uniqueId, form action, and browser URL
+                    if (isCreate && data.unique_id) {
+                        isCreate = false;
+                        uniqueId = data.unique_id;
+                        if (uuidEl) {
+                            uuidEl.textContent = 'UUID: ' + data.unique_id;
+                            uuidEl.classList.remove('hidden');
+                        }
+                        if (autosaveBar) autosaveBar.classList.add('justify-between');
+                        formEl.action = data.edit_url;
+                        if (cancelLink) {
+                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
+                        }
+                        if (history.replaceState) {
+                            history.replaceState(null, '', data.edit_url);
+                        }
+                        var submitBtn = formEl.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.textContent = '保存修改';
+                    }
+
+                    if (pendingSave) scheduleSave();
+                })
+                .catch(function(e) {
+                    failCount++;
+                    var msg = failCount > 1 ? '⚠ 自动保存失败 (' + failCount + ' 次) — 请检查网络连接' : '⚠ 自动保存失败 — 请检查网络连接';
+                    setStatus(msg);
+                    statusEl.className = 'text-xs font-mono text-red-500 dark:text-red-400';
+                    saveTimer = setTimeout(scheduleSave, 10000);
+                });
+            }
+
+            function scheduleSave() {
+                if (saveTimer) clearTimeout(saveTimer);
+                if (getCurrentState() !== lastSavedState) {
+                    saveTimer = setTimeout(doSave, 3000);
+                    pendingSave = true;
+                }
+            }
+
+            // Watch all form fields for changes
+            var watchedFields = [
+                document.querySelector('input[name="title"]'),
+                document.querySelector('textarea[name="body"]'),
+                document.querySelector('input[name="cover"]'),
+                document.querySelector('textarea[name="excerpt"]'),
+                document.querySelector('select[name="category"]'),
+                document.querySelector('select[name="series"]'),
+                document.querySelector('select[name="license"]'),
+            ];
+            watchedFields.forEach(function(el) {
+                if (!el) return;
+                el.addEventListener('input', scheduleSave);
+                el.addEventListener('change', scheduleSave);
+            });
+
+            // Watch tag hidden input changes
+            var tagHidden = document.getElementById('tag-names-hidden');
+            if (tagHidden) {
+                var tagObserver = new MutationObserver(function() { scheduleSave(); });
+                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
+            }
+
+            // Fire-and-forget save when user manually submits the form
+            formEl.addEventListener('submit', function() {
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state !== lastSavedState && uniqueId) {
+                    var fd = collectData();
+                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
+                }
+            });
+
+            // Initialize
+            lastSavedState = getCurrentState();
+        })();
+        </script>
+
+        {# Auto-save JS #}
+        <script>
+        (function() {
+            var statusEl = document.getElementById('autosave-status');
+            var uuidEl = document.getElementById('autosave-uuid');
+            var autosaveBar = document.getElementById('autosave-bar');
+            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var formEl = document.querySelector('form');
+            var cancelLink = formEl.querySelector('a[href]');
+
+            // Determine if editing or creating
+            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
+            var isCreate = !uniqueId;
+
+            // Collect form data
+            function collectData() {
+                var fd = new FormData();
+                fd.append('title', document.querySelector('input[name="title"]').value);
+                fd.append('body', document.querySelector('textarea[name="body"]').value);
+                fd.append('cover', document.querySelector('input[name="cover"]').value);
+                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
+                fd.append('category', document.querySelector('select[name="category"]').value);
+                fd.append('series', document.querySelector('select[name="series"]').value);
+                fd.append('license', document.querySelector('select[name="license"]').value);
+                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
+                if (uniqueId) {
+                    fd.append('unique_id', uniqueId);
+                }
+                return fd;
+            }
+
+            // Serialize current form state for dirty-checking
+            var lastSavedState = '';
+            function getCurrentState() {
+                var fd = collectData();
+                var parts = [];
+                // Sort keys for stable comparison
+                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
+                for (var i = 0; i < keys.length; i++) {
+                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
+                }
+                return parts.join('&');
+            }
+
+            var saveTimer = null;
+            var pendingSave = false;
+            var failCount = 0;
+
+            function setStatus(html, isError) {
+                if (!statusEl) return;
+                statusEl.innerHTML = html;
+                if (isError) {
+                    statusEl.classList.add('text-red-500', 'dark:text-red-400');
+                    statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-cyan-600', 'dark:text-cyan-400', 'text-green-500', 'dark:text-green-400');
+                } else {
+                    statusEl.classList.remove('text-red-500', 'dark:text-red-400');
+                }
+            }
+
+            function doSave() {
+                pendingSave = false;
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state === lastSavedState) return; // nothing changed
+
+                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>', false);
+                statusEl.classList.add('text-cyan-600', 'dark:text-cyan-400');
+                statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-green-500', 'dark:text-green-400');
+
+                var fd = collectData();
+                fetch('{% url "post_autosave_ajax" %}', {
+                    method: 'POST',
+                    body: fd,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) { throw new Error(data.error); }
+                    lastSavedState = state;
+                    failCount = 0;
+                    var now = new Date();
+                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
+                    setStatus('已自动保存 ' + timeStr, false);
+                    statusEl.classList.add('text-green-500', 'dark:text-green-400');
+                    statusEl.classList.remove('text-cyan-600', 'dark:text-cyan-400');
+
+                    // On first create, update uniqueId, form action, and browser URL
+                    if (isCreate && data.unique_id) {
+                        isCreate = false;
+                        uniqueId = data.unique_id;
+                        if (uuidEl) uuidEl.textContent = 'UUID: ' + data.unique_id;
+                        if (uuidEl) uuidEl.classList.remove('hidden');
+                        if (autosaveBar) autosaveBar.classList.add('justify-between');
+                        // Update form action to edit URL
+                        formEl.action = data.edit_url;
+                        // Update cancel link
+                        if (cancelLink) {
+                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
+                        }
+                        // Update browser URL without reload
+                        if (history.replaceState) {
+                            history.replaceState(null, '', data.edit_url);
+                        }
+                        // Update submit button text
+                        var submitBtn = formEl.querySelector('button[type="submit"]');
+                        if (submitBtn) submitBtn.textContent = '保存修改';
+                    }
+
+                    // If submit happens while save in progress, retry
+                    if (pendingSave) scheduleSave();
+                })
+                .catch(function(e) {
+                    failCount++;
+                    var msg = failCount > 1 ? '自动保存失败 (' + failCount + ' 次) — 请检查网络' : '⚠ 自动保存失败 — 请检查网络';
+                    setStatus(msg, true);
+                    // Retry after longer delay on failure
+                    saveTimer = setTimeout(scheduleSave, 10000);
+                });
+            }
+
+            function scheduleSave() {
+                if (saveTimer) clearTimeout(saveTimer);
+                // Only schedule if there are unsaved changes
+                if (getCurrentState() !== lastSavedState) {
+                    saveTimer = setTimeout(doSave, 3000);
+                    pendingSave = true;
+                }
+            }
+
+            // Watch all form fields for changes
+            var watchedFields = [
+                document.querySelector('input[name="title"]'),
+                document.querySelector('textarea[name="body"]'),
+                document.querySelector('input[name="cover"]'),
+                document.querySelector('textarea[name="excerpt"]'),
+                document.querySelector('select[name="category"]'),
+                document.querySelector('select[name="series"]'),
+                document.querySelector('select[name="license"]'),
+            ];
+            watchedFields.forEach(function(el) {
+                if (!el) return;
+                el.addEventListener('input', scheduleSave);
+                el.addEventListener('change', scheduleSave);
+            });
+
+            // Also watch tag hidden input changes via MutationObserver
+            var tagHidden = document.getElementById('tag-names-hidden');
+            if (tagHidden) {
+                var tagObserver = new MutationObserver(function() { scheduleSave(); });
+                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
+            }
+
+            // Save before unload (form submit) — cancel any pending timer and save immediately
+            formEl.addEventListener('submit', function() {
+                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                var state = getCurrentState();
+                if (state !== lastSavedState && uniqueId) {
+                    // Fire-and-forget save before form submission
+                    var fd = collectData();
+                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
+                }
+            });
+
+            // Initialize state
+            lastSavedState = getCurrentState();
+        })();
+        </script>
+
         {% if form.instance.pk %}
-        <div class="text-xs font-mono text-slate-400 dark:text-slate-400">
-            UUID: {{ form.instance.unique_id }}
+        <div id="autosave-bar" class="flex items-center justify-between text-xs font-mono pt-4 border-t border-slate-200 dark:border-slate-700">
+            <span id="autosave-status" class="text-slate-400 dark:text-slate-400">
+                {% if form.instance.status == 'draft' %}草稿模式 — 自动保存已开启{% else %}自动保存已开启{% endif %}
+            </span>
+            <span class="text-slate-400 dark:text-slate-400">UUID: {{ form.instance.unique_id }}</span>
+        </div>
+        {% else %}
+        <div id="autosave-bar" class="flex items-center text-xs font-mono pt-4 border-t border-slate-200 dark:border-slate-700">
+            <span id="autosave-status" class="text-slate-400 dark:text-slate-400">新建草稿 — 将自动保存</span>
+            <span id="autosave-uuid" class="text-slate-400 dark:text-slate-400 ml-auto hidden"></span>
         </div>
         {% endif %}
 

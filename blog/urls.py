@@ -89,6 +89,7 @@ urlpatterns = [
     path("ajax/series/<int:series_id>/manage/", views.series_manage_posts_ajax, name="series_manage_posts_ajax"),
     path("ajax/view/", views.view_count_ajax, name="view_count_ajax"),
     path("ajax/image/upload/", views.image_upload_ajax, name="image_upload_ajax"),
+    path("ajax/post/autosave/", views.post_autosave_ajax, name="post_autosave_ajax"),
     path("ajax/avatar/upload/", views.avatar_upload_ajax, name="avatar_upload_ajax"),
     path("ajax/ping/", views.ping, name="ping"),
 
