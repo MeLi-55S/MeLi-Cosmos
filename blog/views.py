@@ -24,7 +24,7 @@ from django.core.files.base import ContentFile
 from django.core.signing import Signer
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils.text import slugify
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import F, Q, Sum
 from django.core.exceptions import ObjectDoesNotExist
 from django.http import Http404, JsonResponse
@@ -1045,13 +1045,13 @@ def view_count_ajax(request):
     ).exists():
         return JsonResponse({"counted": False})
 
-    Post.objects.filter(pk=post_id).update(views=F("views") + 1)
-    fp_hash = hashlib.sha256((salt + fingerprint).encode()).hexdigest()[:64]
-    ViewLog.objects.create(
-        post_id=post_id,
-        fingerprint_hash=fp_hash,
-        ip_hash=ip_hash,
-    )
+    with transaction.atomic():
+        Post.objects.filter(pk=post_id).update(views=F("views") + 1)
+        ViewLog.objects.create(
+            post_id=post_id,
+            fingerprint_hash=fp_hash,
+            ip_hash=ip_hash,
+        )
     request.session[session_key] = True
 
     return JsonResponse({"counted": True})

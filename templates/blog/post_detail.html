@@ -238,6 +238,9 @@
 {% if post %}
 (function() {
     var postId = {{ post.pk }};
+    var storageKey = 'view_sent_' + postId;
+    if (sessionStorage.getItem(storageKey)) return;
+    sessionStorage.setItem(storageKey, '1');
 
     function collectComponents() {
         var parts = [
