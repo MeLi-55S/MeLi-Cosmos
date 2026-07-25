@@ -198,19 +198,21 @@
             var saveDot = document.getElementById('save-dot');
             var saveText = document.getElementById('save-text');
             var uuidEl = document.getElementById('autosave-uuid');
-            var autosaveBar = document.getElementById('autosave-bar');
             var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            var formEl = document.querySelector('form');
+            var formEl = document.querySelector('form[method="post"]');
             var cancelLink = formEl.querySelector('a[href]');
             var statusHidden = document.querySelector('input[name="status"]');
 
-            // Determine if editing or creating
-            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
-            var isCreate = !uniqueId;
+            // Determine if editing or creating (use pk, not unique_id — model default gives UUID)
+            var isCreate = {{ form.instance.pk|yesno:"false,true" }};
+            var uniqueId = '';
+            {% if form.instance.pk %}
+            uniqueId = '{{ form.instance.unique_id }}';
+            {% endif %}
 
             // Auto-save is disabled when editing an already-published post
             var postStatus = '{{ form.instance.status|default:"draft" }}';
-            var autoSaveEnabled = postStatus !== 'published';
+            var autoSaveEnabled = isCreate || postStatus !== 'published';
 
             // Cache DOM references for safety and performance
             var fieldEls = {
@@ -255,6 +257,7 @@
 
             var saveTimer = null;
             var pendingSave = false;
+            var saveInProgress = false;
             var failCount = 0;
 
             // Pill state update — only swaps classes and text, never changes DOM structure
@@ -262,20 +265,24 @@
                 var cls = [
                     // text colors
                     'text-green-600','dark:text-green-400','text-cyan-600','dark:text-cyan-400',
-                    'text-amber-600','dark:text-amber-400','text-slate-400',
+                    'text-amber-600','dark:text-amber-400','text-red-600','dark:text-red-400',
+                    'text-slate-400',
                     // bg colors
                     'bg-green-50','dark:bg-green-500/10','bg-cyan-50','dark:bg-cyan-500/10',
-                    'bg-amber-50','dark:bg-amber-500/10','bg-slate-100','dark:bg-slate-700/50',
+                    'bg-amber-50','dark:bg-amber-500/10','bg-red-50','dark:bg-red-500/10',
+                    'bg-slate-100','dark:bg-slate-700/50',
                     // border colors
                     'border-green-200','dark:border-green-500/20','border-cyan-200','dark:border-cyan-500/20',
-                    'border-amber-200','dark:border-amber-500/20','border-slate-200','dark:border-slate-600'
+                    'border-amber-200','dark:border-amber-500/20','border-red-200','dark:border-red-500/20',
+                    'border-slate-200','dark:border-slate-600'
                 ];
                 return cls;
             })();
 
             var dotColorClasses = [
                 'bg-green-500','dark:bg-green-400','bg-cyan-500','dark:bg-cyan-400',
-                'bg-amber-500','dark:bg-amber-400','bg-slate-400', 'animate-pulse'
+                'bg-amber-500','dark:bg-amber-400','bg-red-500','dark:bg-red-400',
+                'bg-slate-400', 'animate-pulse'
             ];
 
             var STATE_DEFS = {
@@ -283,6 +290,11 @@
                     pill: 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20',
                     dot: 'bg-green-500 dark:bg-green-400',
                     text: '已就绪'
+                },
+                dirty: {
+                    pill: 'text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20',
+                    dot: 'bg-amber-500 dark:bg-amber-400',
+                    text: '修改中'
                 },
                 saving: {
                     pill: 'text-cyan-600 bg-cyan-50 border-cyan-200 dark:text-cyan-400 dark:bg-cyan-500/10 dark:border-cyan-500/20',
@@ -295,8 +307,8 @@
                     text: null  // set dynamically with time
                 },
                 error: {
-                    pill: 'text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20',
-                    dot: 'bg-amber-500 dark:bg-amber-400',
+                    pill: 'text-red-600 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-500/10 dark:border-red-500/20',
+                    dot: 'bg-red-500 dark:bg-red-400',
                     text: '保存失败'
                 }
             };
@@ -330,6 +342,7 @@
                 var state = getCurrentState();
                 if (state === lastSavedState) return;
 
+                saveInProgress = true;
                 updatePillState('saving');
 
                 var fd = collectData();
@@ -340,6 +353,7 @@
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
+                    saveInProgress = false;
                     if (data.error) { throw new Error(data.error); }
                     lastSavedState = state;
                     failCount = 0;
@@ -371,6 +385,7 @@
                     if (pendingSave) scheduleSave();
                 })
                 .catch(function(e) {
+                    saveInProgress = false;
                     failCount++;
                     updatePillState('error');
                     saveTimer = setTimeout(scheduleSave, 10000);
@@ -379,9 +394,16 @@
 
             function scheduleSave() {
                 if (!autoSaveEnabled) return;
+                if (saveInProgress) {
+                    pendingSave = true;
+                    return;
+                }
                 if (saveTimer) clearTimeout(saveTimer);
                 if (getCurrentState() !== lastSavedState) {
-                    saveTimer = setTimeout(doSave, 3000);
+                    updatePillState('dirty');
+                    // First save (no uniqueId yet): immediate. Subsequent: 3s debounce.
+                    var delay = uniqueId ? 3000 : 0;
+                    saveTimer = setTimeout(doSave, delay);
                     pendingSave = true;
                 }
             }
@@ -650,26 +672,27 @@
         })();
         </script>
 
-        <div id="autosave-bar" class="flex items-center text-xs font-mono pt-4 border-t border-slate-200 dark:border-slate-700 gap-3">
+        {# Floating autosave status badge — fixed top-right, always visible #}
+        <div id="autosave-bar" class="fixed top-20 right-4 z-40 rounded-full shadow-lg shadow-black/5 dark:shadow-black/20 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm">
             <span id="autosave-status"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] border transition-colors duration-500 min-w-[100px] justify-center whitespace-nowrap
-                  {% if form.instance.pk and form.instance.status == 'published' %}text-slate-400 bg-slate-100 border-slate-200 dark:text-slate-400 dark:bg-slate-700/50 dark:border-slate-600
-                  {% else %}text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20{% endif %}">
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] border transition-colors duration-500
+                  {% if form.instance.pk and form.instance.status == 'published' %}text-slate-400 border-slate-200 dark:text-slate-400 dark:border-slate-600
+                  {% else %}text-green-600 border-green-200 dark:text-green-400 dark:border-green-500/20{% endif %}">
                 <span id="save-dot" class="w-1.5 h-1.5 rounded-full inline-block transition-colors duration-500 flex-shrink-0
                     {% if form.instance.pk and form.instance.status == 'published' %}bg-slate-400
                     {% else %}bg-green-500 dark:bg-green-400{% endif %}"></span>
                 <span id="save-text">{% if form.instance.pk and form.instance.status == 'published' %}已发布{% else %}已就绪{% endif %}</span>
             </span>
-            {% if form.instance.pk %}
-            <span class="text-slate-400 dark:text-slate-400">UUID: {{ form.instance.unique_id }}</span>
-            {% else %}
-            <span id="autosave-uuid" class="text-slate-400 dark:text-slate-400 ml-auto hidden"></span>
-            {% endif %}
         </div>
 
         {{ form.status }}
 
         <div class="flex items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700 flex-wrap">
+            {% if form.instance.pk %}
+            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono mr-auto">UUID: {{ form.instance.unique_id }}</span>
+            {% else %}
+            <span id="autosave-uuid" class="text-[10px] text-slate-400 dark:text-slate-500 font-mono mr-auto hidden"></span>
+            {% endif %}
             <button type="submit" id="btn-publish"
                     class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
                 {% if form.instance.pk and form.instance.status == 'published' %}更新文章{% else %}公开发布{% endif %}
