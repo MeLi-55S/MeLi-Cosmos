@@ -26,6 +26,14 @@
         </div>
 
         <div>
+            <label for="{{ form.cover.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">封面图片 URL（可选）</label>
+            {{ form.cover }}
+            {% if form.cover.errors %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.cover.errors.0 }}</p>
+            {% endif %}
+        </div>
+
+        <div>
             <label for="{{ form.body.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">
                 正文 <span class="text-slate-400 dark:text-slate-400">（Markdown）</span>
             </label>
@@ -56,30 +64,21 @@
             {% endif %}
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-                <label for="{{ form.category.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">分类</label>
-                <div class="flex gap-2">
-                    {{ form.category }}
-                    <button type="button" id="new-category-btn" class="flex-shrink-0 w-11 h-11 flex items-center justify-center text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 rounded-lg transition bg-transparent border border-slate-300 dark:border-slate-700 cursor-pointer" title="新建分类">+</button>
-                </div>
-                <div id="new-category-form" class="hidden mt-2 flex gap-2">
-                    <input type="text" id="new-category-name" placeholder="新分类名称"
-                           class="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition">
-                    <button type="button" id="new-category-confirm" class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
-                    <button type="button" id="new-category-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
-                </div>
-                {% if form.category.errors %}
-                <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.category.errors.0 }}</p>
-                {% endif %}
+        <div>
+            <label for="{{ form.category.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">分类</label>
+            <div class="flex gap-2">
+                {{ form.category }}
+                <button type="button" id="new-category-btn" class="flex-shrink-0 w-11 h-11 flex items-center justify-center text-xs font-mono text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 rounded-lg transition bg-transparent border border-slate-300 dark:border-slate-700 cursor-pointer" title="新建分类">+</button>
             </div>
-            <div>
-                <label for="{{ form.status.id_for_label }}" class="block text-xs font-mono text-slate-500 dark:text-slate-400 mb-2">状态</label>
-                {{ form.status }}
-                {% if form.status.errors %}
-                <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.status.errors.0 }}</p>
-                {% endif %}
+            <div id="new-category-form" class="hidden mt-2 flex gap-2">
+                <input type="text" id="new-category-name" placeholder="新分类名称"
+                       class="flex-1 bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 focus:border-cyan-600 dark:focus:border-cyan-500 focus:ring-1 focus:ring-cyan-600 dark:focus:ring-cyan-500 outline-none transition">
+                <button type="button" id="new-category-confirm" class="px-3 py-1.5 bg-cyan-600 text-white rounded-lg text-xs font-mono hover:bg-cyan-700 transition">确认</button>
+                <button type="button" id="new-category-cancel" class="px-3 py-1.5 text-xs font-mono text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition bg-transparent border-none cursor-pointer">取消</button>
             </div>
+            {% if form.category.errors %}
+            <p class="text-xs text-red-600 dark:text-red-400 mt-1 font-mono">{{ form.category.errors.0 }}</p>
+            {% endif %}
         </div>
 
         <div>
@@ -196,27 +195,46 @@
         <script>
         (function() {
             var statusEl = document.getElementById('autosave-status');
+            var saveDot = document.getElementById('save-dot');
+            var saveText = document.getElementById('save-text');
             var uuidEl = document.getElementById('autosave-uuid');
             var autosaveBar = document.getElementById('autosave-bar');
             var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
             var formEl = document.querySelector('form');
             var cancelLink = formEl.querySelector('a[href]');
+            var statusHidden = document.querySelector('input[name="status"]');
 
             // Determine if editing or creating
             var uniqueId = '{{ form.instance.unique_id|default:'' }}';
             var isCreate = !uniqueId;
 
+            // Auto-save is disabled when editing an already-published post
+            var postStatus = '{{ form.instance.status|default:"draft" }}';
+            var autoSaveEnabled = postStatus !== 'published';
+
+            // Cache DOM references for safety and performance
+            var fieldEls = {
+                title: document.querySelector('input[name="title"]'),
+                body: document.querySelector('textarea[name="body"]'),
+                cover: document.querySelector('input[name="cover"]'),
+                excerpt: document.querySelector('textarea[name="excerpt"]'),
+                category: document.querySelector('select[name="category"]'),
+                series: document.querySelector('select[name="series"]'),
+                license: document.querySelector('select[name="license"]'),
+                tag_names: document.getElementById('tag-names-hidden'),
+            };
+
             // Collect form data
             function collectData() {
                 var fd = new FormData();
-                fd.append('title', document.querySelector('input[name="title"]').value);
-                fd.append('body', document.querySelector('textarea[name="body"]').value);
-                fd.append('cover', document.querySelector('input[name="cover"]').value);
-                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
-                fd.append('category', document.querySelector('select[name="category"]').value);
-                fd.append('series', document.querySelector('select[name="series"]').value);
-                fd.append('license', document.querySelector('select[name="license"]').value);
-                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
+                if (fieldEls.title) fd.append('title', fieldEls.title.value);
+                if (fieldEls.body) fd.append('body', fieldEls.body.value);
+                if (fieldEls.cover) fd.append('cover', fieldEls.cover.value);
+                if (fieldEls.excerpt) fd.append('excerpt', fieldEls.excerpt.value);
+                if (fieldEls.category) fd.append('category', fieldEls.category.value);
+                if (fieldEls.series) fd.append('series', fieldEls.series.value);
+                if (fieldEls.license) fd.append('license', fieldEls.license.value);
+                if (fieldEls.tag_names) fd.append('tag_names', fieldEls.tag_names.value);
                 if (uniqueId) {
                     fd.append('unique_id', uniqueId);
                 }
@@ -228,7 +246,6 @@
             function getCurrentState() {
                 var fd = collectData();
                 var parts = [];
-                // Sort keys for stable comparison
                 var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
                 for (var i = 0; i < keys.length; i++) {
                     parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
@@ -240,26 +257,80 @@
             var pendingSave = false;
             var failCount = 0;
 
-            function setStatus(html, isError) {
-                if (!statusEl) return;
-                statusEl.innerHTML = html;
-                if (isError) {
-                    statusEl.classList.add('text-red-500', 'dark:text-red-400');
-                    statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-cyan-600', 'dark:text-cyan-400', 'text-green-500', 'dark:text-green-400');
-                } else {
-                    statusEl.classList.remove('text-red-500', 'dark:text-red-400');
+            // Pill state update — only swaps classes and text, never changes DOM structure
+            var pillColorClasses = (function() {
+                var cls = [
+                    // text colors
+                    'text-green-600','dark:text-green-400','text-cyan-600','dark:text-cyan-400',
+                    'text-amber-600','dark:text-amber-400','text-slate-400',
+                    // bg colors
+                    'bg-green-50','dark:bg-green-500/10','bg-cyan-50','dark:bg-cyan-500/10',
+                    'bg-amber-50','dark:bg-amber-500/10','bg-slate-100','dark:bg-slate-700/50',
+                    // border colors
+                    'border-green-200','dark:border-green-500/20','border-cyan-200','dark:border-cyan-500/20',
+                    'border-amber-200','dark:border-amber-500/20','border-slate-200','dark:border-slate-600'
+                ];
+                return cls;
+            })();
+
+            var dotColorClasses = [
+                'bg-green-500','dark:bg-green-400','bg-cyan-500','dark:bg-cyan-400',
+                'bg-amber-500','dark:bg-amber-400','bg-slate-400', 'animate-pulse'
+            ];
+
+            var STATE_DEFS = {
+                ready: {
+                    pill: 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20',
+                    dot: 'bg-green-500 dark:bg-green-400',
+                    text: '已就绪'
+                },
+                saving: {
+                    pill: 'text-cyan-600 bg-cyan-50 border-cyan-200 dark:text-cyan-400 dark:bg-cyan-500/10 dark:border-cyan-500/20',
+                    dot: 'bg-cyan-500 dark:bg-cyan-400 animate-pulse',
+                    text: '正在保存'
+                },
+                saved: {
+                    pill: 'text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20',
+                    dot: 'bg-green-500 dark:bg-green-400',
+                    text: null  // set dynamically with time
+                },
+                error: {
+                    pill: 'text-amber-600 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-500/10 dark:border-amber-500/20',
+                    dot: 'bg-amber-500 dark:bg-amber-400',
+                    text: '保存失败'
                 }
+            };
+
+            function updatePillState(state, timeStr) {
+                if (!statusEl || !saveDot || !saveText) return;
+                var s = STATE_DEFS[state];
+                if (!s) return;
+
+                // Reset all pill color classes, then apply target
+                pillColorClasses.forEach(function(c) { statusEl.classList.remove(c); });
+                s.pill.split(' ').forEach(function(c) { statusEl.classList.add(c); });
+
+                // Reset all dot color classes, then apply target
+                dotColorClasses.forEach(function(c) { saveDot.classList.remove(c); });
+                s.dot.split(' ').forEach(function(c) { saveDot.classList.add(c); });
+
+                // Update text
+                var txt = s.text;
+                if (state === 'saved' && timeStr) {
+                    txt = '已自动保存 ' + timeStr;
+                } else if (state === 'saved') {
+                    txt = '已自动保存';
+                }
+                saveText.textContent = txt;
             }
 
             function doSave() {
                 pendingSave = false;
                 if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
                 var state = getCurrentState();
-                if (state === lastSavedState) return; // nothing changed
+                if (state === lastSavedState) return;
 
-                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>', false);
-                statusEl.classList.add('text-cyan-600', 'dark:text-cyan-400');
-                statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-green-500', 'dark:text-green-400');
+                updatePillState('saving');
 
                 var fd = collectData();
                 fetch('{% url "post_autosave_ajax" %}', {
@@ -274,17 +345,17 @@
                     failCount = 0;
                     var now = new Date();
                     var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-                    setStatus('已自动保存 ' + timeStr, false);
-                    statusEl.classList.add('text-green-500', 'dark:text-green-400');
-                    statusEl.classList.remove('text-cyan-600', 'dark:text-cyan-400');
+                    updatePillState('saved', timeStr);
 
                     // On first create, update uniqueId, form action, and browser URL
                     if (isCreate && data.unique_id) {
                         isCreate = false;
                         uniqueId = data.unique_id;
-                        if (uuidEl) uuidEl.textContent = 'UUID: ' + data.unique_id;
-                        if (uuidEl) uuidEl.classList.remove('hidden');
-                        if (autosaveBar) autosaveBar.classList.add('justify-between');
+                        autoSaveEnabled = true;
+                        if (uuidEl) {
+                            uuidEl.textContent = 'UUID: ' + data.unique_id;
+                            uuidEl.classList.remove('hidden');
+                        }
                         // Update form action to edit URL
                         formEl.action = data.edit_url;
                         // Update cancel link
@@ -295,43 +366,29 @@
                         if (history.replaceState) {
                             history.replaceState(null, '', data.edit_url);
                         }
-                        // Update submit button text
-                        var submitBtn = formEl.querySelector('button[type="submit"]');
-                        if (submitBtn) submitBtn.textContent = '保存修改';
                     }
 
-                    // If submit happens while save in progress, retry
                     if (pendingSave) scheduleSave();
                 })
                 .catch(function(e) {
                     failCount++;
-                    var msg = failCount > 1 ? '自动保存失败 (' + failCount + ' 次) — 请检查网络' : '⚠ 自动保存失败 — 请检查网络';
-                    setStatus(msg, true);
-                    // Retry after longer delay on failure
+                    updatePillState('error');
                     saveTimer = setTimeout(scheduleSave, 10000);
                 });
             }
 
             function scheduleSave() {
+                if (!autoSaveEnabled) return;
                 if (saveTimer) clearTimeout(saveTimer);
-                // Only schedule if there are unsaved changes
                 if (getCurrentState() !== lastSavedState) {
                     saveTimer = setTimeout(doSave, 3000);
                     pendingSave = true;
                 }
             }
 
-            // Watch all form fields for changes
-            var watchedFields = [
-                document.querySelector('input[name="title"]'),
-                document.querySelector('textarea[name="body"]'),
-                document.querySelector('input[name="cover"]'),
-                document.querySelector('textarea[name="excerpt"]'),
-                document.querySelector('select[name="category"]'),
-                document.querySelector('select[name="series"]'),
-                document.querySelector('select[name="license"]'),
-            ];
-            watchedFields.forEach(function(el) {
+            // Watch all form fields for changes (reuse cached refs)
+            [fieldEls.title, fieldEls.body, fieldEls.cover, fieldEls.excerpt,
+             fieldEls.category, fieldEls.series, fieldEls.license].forEach(function(el) {
                 if (!el) return;
                 el.addEventListener('input', scheduleSave);
                 el.addEventListener('change', scheduleSave);
@@ -344,19 +401,31 @@
                 tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
             }
 
+            // Status buttons: set hidden value before submit
+            ['publish', 'draft', 'private'].forEach(function(action) {
+                var btn = document.getElementById('btn-' + action);
+                if (btn) {
+                    btn.addEventListener('click', function() {
+                        if (statusHidden) statusHidden.value = action;
+                    });
+                }
+            });
+
             // Save before unload (form submit) — cancel any pending timer and save immediately
             formEl.addEventListener('submit', function() {
                 if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+                if (!autoSaveEnabled) return;
                 var state = getCurrentState();
                 if (state !== lastSavedState && uniqueId) {
-                    // Fire-and-forget save before form submission
                     var fd = collectData();
                     navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
                 }
             });
 
             // Initialize state
-            lastSavedState = getCurrentState();
+            if (autoSaveEnabled) {
+                lastSavedState = getCurrentState();
+            }
         })();
         </script>
 
@@ -414,174 +483,6 @@
             document.querySelector('select[name="series"]'),
             '{% url "series_create_ajax" %}'
         );
-        </script>
-
-        {# Auto-save JS #}
-        <script>
-        (function() {
-            var statusEl = document.getElementById('autosave-status');
-            var uuidEl = document.getElementById('autosave-uuid');
-            var autosaveBar = document.getElementById('autosave-bar');
-            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            var formEl = document.querySelector('form');
-            var cancelLink = formEl.querySelector('a[href]');
-
-            // Determine if editing or creating
-            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
-            var isCreate = !uniqueId;
-
-            // Collect form data
-            function collectData() {
-                var fd = new FormData();
-                fd.append('title', document.querySelector('input[name="title"]').value);
-                fd.append('body', document.querySelector('textarea[name="body"]').value);
-                fd.append('cover', document.querySelector('input[name="cover"]').value);
-                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
-                fd.append('category', document.querySelector('select[name="category"]').value);
-                fd.append('series', document.querySelector('select[name="series"]').value);
-                fd.append('license', document.querySelector('select[name="license"]').value);
-                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
-                if (uniqueId) {
-                    fd.append('unique_id', uniqueId);
-                }
-                return fd;
-            }
-
-            // Serialize current form state for dirty-checking
-            var lastSavedState = '';
-            function getCurrentState() {
-                var fd = collectData();
-                var parts = [];
-                // Sort keys for stable comparison
-                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
-                for (var i = 0; i < keys.length; i++) {
-                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
-                }
-                return parts.join('&');
-            }
-
-            var saveTimer = null;
-            var pendingSave = false;
-            var failCount = 0;
-
-            function setStatus(html, isError) {
-                if (!statusEl) return;
-                statusEl.innerHTML = html;
-                if (isError) {
-                    statusEl.classList.add('text-red-500', 'dark:text-red-400');
-                    statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-cyan-600', 'dark:text-cyan-400', 'text-green-500', 'dark:text-green-400');
-                } else {
-                    statusEl.classList.remove('text-red-500', 'dark:text-red-400');
-                }
-            }
-
-            function doSave() {
-                pendingSave = false;
-                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-                var state = getCurrentState();
-                if (state === lastSavedState) return; // nothing changed
-
-                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>', false);
-                statusEl.classList.add('text-cyan-600', 'dark:text-cyan-400');
-                statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-green-500', 'dark:text-green-400');
-
-                var fd = collectData();
-                fetch('{% url "post_autosave_ajax" %}', {
-                    method: 'POST',
-                    body: fd,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.error) { throw new Error(data.error); }
-                    lastSavedState = state;
-                    failCount = 0;
-                    var now = new Date();
-                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-                    setStatus('已自动保存 ' + timeStr, false);
-                    statusEl.classList.add('text-green-500', 'dark:text-green-400');
-                    statusEl.classList.remove('text-cyan-600', 'dark:text-cyan-400');
-
-                    // On first create, update uniqueId, form action, and browser URL
-                    if (isCreate && data.unique_id) {
-                        isCreate = false;
-                        uniqueId = data.unique_id;
-                        if (uuidEl) uuidEl.textContent = 'UUID: ' + data.unique_id;
-                        if (uuidEl) uuidEl.classList.remove('hidden');
-                        if (autosaveBar) autosaveBar.classList.add('justify-between');
-                        // Update form action to edit URL
-                        formEl.action = data.edit_url;
-                        // Update cancel link
-                        if (cancelLink) {
-                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
-                        }
-                        // Update browser URL without reload
-                        if (history.replaceState) {
-                            history.replaceState(null, '', data.edit_url);
-                        }
-                        // Update submit button text
-                        var submitBtn = formEl.querySelector('button[type="submit"]');
-                        if (submitBtn) submitBtn.textContent = '保存修改';
-                    }
-
-                    // If submit happens while save in progress, retry
-                    if (pendingSave) scheduleSave();
-                })
-                .catch(function(e) {
-                    failCount++;
-                    var msg = failCount > 1 ? '自动保存失败 (' + failCount + ' 次) — 请检查网络' : '⚠ 自动保存失败 — 请检查网络';
-                    setStatus(msg, true);
-                    // Retry after longer delay on failure
-                    saveTimer = setTimeout(scheduleSave, 10000);
-                });
-            }
-
-            function scheduleSave() {
-                if (saveTimer) clearTimeout(saveTimer);
-                // Only schedule if there are unsaved changes
-                if (getCurrentState() !== lastSavedState) {
-                    saveTimer = setTimeout(doSave, 3000);
-                    pendingSave = true;
-                }
-            }
-
-            // Watch all form fields for changes
-            var watchedFields = [
-                document.querySelector('input[name="title"]'),
-                document.querySelector('textarea[name="body"]'),
-                document.querySelector('input[name="cover"]'),
-                document.querySelector('textarea[name="excerpt"]'),
-                document.querySelector('select[name="category"]'),
-                document.querySelector('select[name="series"]'),
-                document.querySelector('select[name="license"]'),
-            ];
-            watchedFields.forEach(function(el) {
-                if (!el) return;
-                el.addEventListener('input', scheduleSave);
-                el.addEventListener('change', scheduleSave);
-            });
-
-            // Also watch tag hidden input changes via MutationObserver
-            var tagHidden = document.getElementById('tag-names-hidden');
-            if (tagHidden) {
-                var tagObserver = new MutationObserver(function() { scheduleSave(); });
-                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
-            }
-
-            // Save before unload (form submit) — cancel any pending timer and save immediately
-            formEl.addEventListener('submit', function() {
-                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-                var state = getCurrentState();
-                if (state !== lastSavedState && uniqueId) {
-                    // Fire-and-forget save before form submission
-                    var fd = collectData();
-                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
-                }
-            });
-
-            // Initialize state
-            lastSavedState = getCurrentState();
-        })();
         </script>
 
         {# Alt text prompt modal #}
@@ -749,346 +650,37 @@
         })();
         </script>
 
-        {# Auto-save JS #}
-        <script>
-        (function() {
-            var statusEl = document.getElementById('autosave-status');
-            var uuidEl = document.getElementById('autosave-uuid');
-            var autosaveBar = document.getElementById('autosave-bar');
-            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            var formEl = document.querySelector('form');
-            var cancelLink = formEl.querySelector('a[href]');
-
-            // Determine if editing or creating
-            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
-            var isCreate = !uniqueId;
-
-            // Collect form data
-            function collectData() {
-                var fd = new FormData();
-                fd.append('title', document.querySelector('input[name="title"]').value);
-                fd.append('body', document.querySelector('textarea[name="body"]').value);
-                fd.append('cover', document.querySelector('input[name="cover"]').value);
-                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
-                fd.append('category', document.querySelector('select[name="category"]').value);
-                fd.append('series', document.querySelector('select[name="series"]').value);
-                fd.append('license', document.querySelector('select[name="license"]').value);
-                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
-                if (uniqueId) {
-                    fd.append('unique_id', uniqueId);
-                }
-                return fd;
-            }
-
-            // Serialize current form state for dirty-checking
-            var lastSavedState = '';
-            function getCurrentState() {
-                var fd = collectData();
-                var parts = [];
-                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
-                for (var i = 0; i < keys.length; i++) {
-                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
-                }
-                return parts.join('&');
-            }
-
-            var saveTimer = null;
-            var pendingSave = false;
-            var failCount = 0;
-
-            function setStatus(html) {
-                if (!statusEl) return;
-                statusEl.innerHTML = html;
-            }
-
-            function doSave() {
-                pendingSave = false;
-                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-                var state = getCurrentState();
-                if (state === lastSavedState) return;
-
-                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>');
-                statusEl.className = 'text-xs font-mono text-cyan-600 dark:text-cyan-400';
-
-                var fd = collectData();
-                fetch('{% url "post_autosave_ajax" %}', {
-                    method: 'POST',
-                    body: fd,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.error) { throw new Error(data.error); }
-                    lastSavedState = state;
-                    failCount = 0;
-                    var now = new Date();
-                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-                    setStatus('已自动保存 ' + timeStr);
-                    statusEl.className = 'text-xs font-mono text-green-500 dark:text-green-400';
-
-                    // On first create, update uniqueId, form action, and browser URL
-                    if (isCreate && data.unique_id) {
-                        isCreate = false;
-                        uniqueId = data.unique_id;
-                        if (uuidEl) {
-                            uuidEl.textContent = 'UUID: ' + data.unique_id;
-                            uuidEl.classList.remove('hidden');
-                        }
-                        if (autosaveBar) autosaveBar.classList.add('justify-between');
-                        formEl.action = data.edit_url;
-                        if (cancelLink) {
-                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
-                        }
-                        if (history.replaceState) {
-                            history.replaceState(null, '', data.edit_url);
-                        }
-                        var submitBtn = formEl.querySelector('button[type="submit"]');
-                        if (submitBtn) submitBtn.textContent = '保存修改';
-                    }
-
-                    if (pendingSave) scheduleSave();
-                })
-                .catch(function(e) {
-                    failCount++;
-                    var msg = failCount > 1 ? '⚠ 自动保存失败 (' + failCount + ' 次) — 请检查网络连接' : '⚠ 自动保存失败 — 请检查网络连接';
-                    setStatus(msg);
-                    statusEl.className = 'text-xs font-mono text-red-500 dark:text-red-400';
-                    saveTimer = setTimeout(scheduleSave, 10000);
-                });
-            }
-
-            function scheduleSave() {
-                if (saveTimer) clearTimeout(saveTimer);
-                if (getCurrentState() !== lastSavedState) {
-                    saveTimer = setTimeout(doSave, 3000);
-                    pendingSave = true;
-                }
-            }
-
-            // Watch all form fields for changes
-            var watchedFields = [
-                document.querySelector('input[name="title"]'),
-                document.querySelector('textarea[name="body"]'),
-                document.querySelector('input[name="cover"]'),
-                document.querySelector('textarea[name="excerpt"]'),
-                document.querySelector('select[name="category"]'),
-                document.querySelector('select[name="series"]'),
-                document.querySelector('select[name="license"]'),
-            ];
-            watchedFields.forEach(function(el) {
-                if (!el) return;
-                el.addEventListener('input', scheduleSave);
-                el.addEventListener('change', scheduleSave);
-            });
-
-            // Watch tag hidden input changes
-            var tagHidden = document.getElementById('tag-names-hidden');
-            if (tagHidden) {
-                var tagObserver = new MutationObserver(function() { scheduleSave(); });
-                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
-            }
-
-            // Fire-and-forget save when user manually submits the form
-            formEl.addEventListener('submit', function() {
-                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-                var state = getCurrentState();
-                if (state !== lastSavedState && uniqueId) {
-                    var fd = collectData();
-                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
-                }
-            });
-
-            // Initialize
-            lastSavedState = getCurrentState();
-        })();
-        </script>
-
-        {# Auto-save JS #}
-        <script>
-        (function() {
-            var statusEl = document.getElementById('autosave-status');
-            var uuidEl = document.getElementById('autosave-uuid');
-            var autosaveBar = document.getElementById('autosave-bar');
-            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            var formEl = document.querySelector('form');
-            var cancelLink = formEl.querySelector('a[href]');
-
-            // Determine if editing or creating
-            var uniqueId = '{{ form.instance.unique_id|default:'' }}';
-            var isCreate = !uniqueId;
-
-            // Collect form data
-            function collectData() {
-                var fd = new FormData();
-                fd.append('title', document.querySelector('input[name="title"]').value);
-                fd.append('body', document.querySelector('textarea[name="body"]').value);
-                fd.append('cover', document.querySelector('input[name="cover"]').value);
-                fd.append('excerpt', document.querySelector('textarea[name="excerpt"]').value);
-                fd.append('category', document.querySelector('select[name="category"]').value);
-                fd.append('series', document.querySelector('select[name="series"]').value);
-                fd.append('license', document.querySelector('select[name="license"]').value);
-                fd.append('tag_names', document.getElementById('tag-names-hidden').value);
-                if (uniqueId) {
-                    fd.append('unique_id', uniqueId);
-                }
-                return fd;
-            }
-
-            // Serialize current form state for dirty-checking
-            var lastSavedState = '';
-            function getCurrentState() {
-                var fd = collectData();
-                var parts = [];
-                // Sort keys for stable comparison
-                var keys = ['title', 'body', 'cover', 'excerpt', 'category', 'series', 'license', 'tag_names'];
-                for (var i = 0; i < keys.length; i++) {
-                    parts.push(keys[i] + '=' + (fd.get(keys[i]) || ''));
-                }
-                return parts.join('&');
-            }
-
-            var saveTimer = null;
-            var pendingSave = false;
-            var failCount = 0;
-
-            function setStatus(html, isError) {
-                if (!statusEl) return;
-                statusEl.innerHTML = html;
-                if (isError) {
-                    statusEl.classList.add('text-red-500', 'dark:text-red-400');
-                    statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-cyan-600', 'dark:text-cyan-400', 'text-green-500', 'dark:text-green-400');
-                } else {
-                    statusEl.classList.remove('text-red-500', 'dark:text-red-400');
-                }
-            }
-
-            function doSave() {
-                pendingSave = false;
-                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-                var state = getCurrentState();
-                if (state === lastSavedState) return; // nothing changed
-
-                setStatus('<span class="inline-flex items-center gap-1"><svg class="animate-spin h-3 w-3" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>自动保存中…</span>', false);
-                statusEl.classList.add('text-cyan-600', 'dark:text-cyan-400');
-                statusEl.classList.remove('text-slate-400', 'dark:text-slate-400', 'text-green-500', 'dark:text-green-400');
-
-                var fd = collectData();
-                fetch('{% url "post_autosave_ajax" %}', {
-                    method: 'POST',
-                    body: fd,
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrfToken }
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.error) { throw new Error(data.error); }
-                    lastSavedState = state;
-                    failCount = 0;
-                    var now = new Date();
-                    var timeStr = ('0' + now.getHours()).slice(-2) + ':' + ('0' + now.getMinutes()).slice(-2);
-                    setStatus('已自动保存 ' + timeStr, false);
-                    statusEl.classList.add('text-green-500', 'dark:text-green-400');
-                    statusEl.classList.remove('text-cyan-600', 'dark:text-cyan-400');
-
-                    // On first create, update uniqueId, form action, and browser URL
-                    if (isCreate && data.unique_id) {
-                        isCreate = false;
-                        uniqueId = data.unique_id;
-                        if (uuidEl) uuidEl.textContent = 'UUID: ' + data.unique_id;
-                        if (uuidEl) uuidEl.classList.remove('hidden');
-                        if (autosaveBar) autosaveBar.classList.add('justify-between');
-                        // Update form action to edit URL
-                        formEl.action = data.edit_url;
-                        // Update cancel link
-                        if (cancelLink) {
-                            cancelLink.href = '{% url "post_detail" username=user.username slug="__slug__" %}'.replace('__slug__', data.slug);
-                        }
-                        // Update browser URL without reload
-                        if (history.replaceState) {
-                            history.replaceState(null, '', data.edit_url);
-                        }
-                        // Update submit button text
-                        var submitBtn = formEl.querySelector('button[type="submit"]');
-                        if (submitBtn) submitBtn.textContent = '保存修改';
-                    }
-
-                    // If submit happens while save in progress, retry
-                    if (pendingSave) scheduleSave();
-                })
-                .catch(function(e) {
-                    failCount++;
-                    var msg = failCount > 1 ? '自动保存失败 (' + failCount + ' 次) — 请检查网络' : '⚠ 自动保存失败 — 请检查网络';
-                    setStatus(msg, true);
-                    // Retry after longer delay on failure
-                    saveTimer = setTimeout(scheduleSave, 10000);
-                });
-            }
-
-            function scheduleSave() {
-                if (saveTimer) clearTimeout(saveTimer);
-                // Only schedule if there are unsaved changes
-                if (getCurrentState() !== lastSavedState) {
-                    saveTimer = setTimeout(doSave, 3000);
-                    pendingSave = true;
-                }
-            }
-
-            // Watch all form fields for changes
-            var watchedFields = [
-                document.querySelector('input[name="title"]'),
-                document.querySelector('textarea[name="body"]'),
-                document.querySelector('input[name="cover"]'),
-                document.querySelector('textarea[name="excerpt"]'),
-                document.querySelector('select[name="category"]'),
-                document.querySelector('select[name="series"]'),
-                document.querySelector('select[name="license"]'),
-            ];
-            watchedFields.forEach(function(el) {
-                if (!el) return;
-                el.addEventListener('input', scheduleSave);
-                el.addEventListener('change', scheduleSave);
-            });
-
-            // Also watch tag hidden input changes via MutationObserver
-            var tagHidden = document.getElementById('tag-names-hidden');
-            if (tagHidden) {
-                var tagObserver = new MutationObserver(function() { scheduleSave(); });
-                tagObserver.observe(tagHidden, { attributes: true, attributeFilter: ['value'] });
-            }
-
-            // Save before unload (form submit) — cancel any pending timer and save immediately
-            formEl.addEventListener('submit', function() {
-                if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-                var state = getCurrentState();
-                if (state !== lastSavedState && uniqueId) {
-                    // Fire-and-forget save before form submission
-                    var fd = collectData();
-                    navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
-                }
-            });
-
-            // Initialize state
-            lastSavedState = getCurrentState();
-        })();
-        </script>
-
-        {% if form.instance.pk %}
-        <div id="autosave-bar" class="flex items-center justify-between text-xs font-mono pt-4 border-t border-slate-200 dark:border-slate-700">
-            <span id="autosave-status" class="text-slate-400 dark:text-slate-400">
-                {% if form.instance.status == 'draft' %}草稿模式 — 自动保存已开启{% else %}自动保存已开启{% endif %}
+        <div id="autosave-bar" class="flex items-center text-xs font-mono pt-4 border-t border-slate-200 dark:border-slate-700 gap-3">
+            <span id="autosave-status"
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] border transition-colors duration-500 min-w-[100px] justify-center whitespace-nowrap
+                  {% if form.instance.pk and form.instance.status == 'published' %}text-slate-400 bg-slate-100 border-slate-200 dark:text-slate-400 dark:bg-slate-700/50 dark:border-slate-600
+                  {% else %}text-green-600 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-500/10 dark:border-green-500/20{% endif %}">
+                <span id="save-dot" class="w-1.5 h-1.5 rounded-full inline-block transition-colors duration-500 flex-shrink-0
+                    {% if form.instance.pk and form.instance.status == 'published' %}bg-slate-400
+                    {% else %}bg-green-500 dark:bg-green-400{% endif %}"></span>
+                <span id="save-text">{% if form.instance.pk and form.instance.status == 'published' %}已发布{% else %}已就绪{% endif %}</span>
             </span>
+            {% if form.instance.pk %}
             <span class="text-slate-400 dark:text-slate-400">UUID: {{ form.instance.unique_id }}</span>
-        </div>
-        {% else %}
-        <div id="autosave-bar" class="flex items-center text-xs font-mono pt-4 border-t border-slate-200 dark:border-slate-700">
-            <span id="autosave-status" class="text-slate-400 dark:text-slate-400">新建草稿 — 将自动保存</span>
+            {% else %}
             <span id="autosave-uuid" class="text-slate-400 dark:text-slate-400 ml-auto hidden"></span>
+            {% endif %}
         </div>
-        {% endif %}
 
-        <div class="flex items-center gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-            <button type="submit"
-                    class="px-6 py-3 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
-                {% if form.instance.pk %}保存修改{% else %}发布文章{% endif %}
+        {{ form.status }}
+
+        <div class="flex items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700 flex-wrap">
+            <button type="submit" id="btn-publish"
+                    class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
+                {% if form.instance.pk and form.instance.status == 'published' %}更新文章{% else %}公开发布{% endif %}
+            </button>
+            <button type="submit" id="btn-draft"
+                    class="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition font-mono text-sm min-h-[44px]">
+                保存草稿
+            </button>
+            <button type="submit" id="btn-private"
+                    class="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition font-mono text-sm min-h-[44px]">
+                私密收藏
             </button>
             <a href="{% if form.instance.pk %}{% url 'post_detail' username=form.instance.author.username slug=form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
                class="px-4 py-2.5 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">

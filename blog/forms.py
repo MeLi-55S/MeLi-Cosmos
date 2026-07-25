@@ -80,16 +80,14 @@ class PostForm(forms.ModelForm):
             "license": forms.Select(attrs={
                 "class": SELECT_CLASS,
             }),
-            "status": forms.Select(attrs={
-                "class": SELECT_CLASS,
-            }),
+            "status": forms.HiddenInput(),
         }
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         super().__init__(*args, **kwargs)
         if not self.instance or not self.instance.pk:
-            self.fields["status"].initial = "published"
+            self.fields["status"].initial = "draft"
         if self.instance and self.instance.pk:
             self.fields["tag_names"].initial = ", ".join(
                 self.instance.tags.values_list("name", flat=True)
