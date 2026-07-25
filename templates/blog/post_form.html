@@ -8,7 +8,7 @@
         {% if form.instance.pk %}✏️ 编辑文章{% else %}✨ 新建文章{% endif %}
     </h1>
 
-    <form method="post" class="space-y-6">
+    <form method="post" class="space-y-6" id="post-form">
         {% csrf_token %}
 
         {% if form.non_field_errors %}
@@ -191,17 +191,27 @@
         })();
         </script>
 
+        {{ form.status }}
+
         {# Auto-save JS #}
         <script>
         (function() {
-            var statusEl = document.getElementById('autosave-status');
-            var saveDot = document.getElementById('save-dot');
-            var saveText = document.getElementById('save-text');
-            var uuidEl = document.getElementById('autosave-uuid');
-            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-            var formEl = document.querySelector('form[method="post"]');
-            var cancelLink = formEl.querySelector('a[href]');
-            var statusHidden = document.querySelector('input[name="status"]');
+            var statusEl = null;
+            var saveDot = null;
+            var saveText = null;
+            var uuidEl = null;
+
+            // Deferred init: badge elements are located after this script in the DOM
+            function initBadgeEls() {
+                statusEl = document.getElementById('autosave-status');
+                saveDot = document.getElementById('save-dot');
+                saveText = document.getElementById('save-text');
+                uuidEl = document.getElementById('autosave-uuid');
+            }
+            var formEl = document.getElementById('post-form');
+            var csrfToken = formEl.querySelector('[name=csrfmiddlewaretoken]').value;
+            var cancelLink = document.getElementById('cancel-link');
+            var statusHidden = formEl.querySelector('input[name="status"]');
 
             // Determine if editing or creating (use pk, not unique_id — model default gives UUID)
             var isCreate = {{ form.instance.pk|yesno:"false,true" }};
@@ -216,13 +226,13 @@
 
             // Cache DOM references for safety and performance
             var fieldEls = {
-                title: document.querySelector('input[name="title"]'),
-                body: document.querySelector('textarea[name="body"]'),
-                cover: document.querySelector('input[name="cover"]'),
-                excerpt: document.querySelector('textarea[name="excerpt"]'),
-                category: document.querySelector('select[name="category"]'),
-                series: document.querySelector('select[name="series"]'),
-                license: document.querySelector('select[name="license"]'),
+                title: formEl.querySelector('input[name="title"]'),
+                body: formEl.querySelector('textarea[name="body"]'),
+                cover: formEl.querySelector('input[name="cover"]'),
+                excerpt: formEl.querySelector('textarea[name="excerpt"]'),
+                category: formEl.querySelector('select[name="category"]'),
+                series: formEl.querySelector('select[name="series"]'),
+                license: formEl.querySelector('select[name="license"]'),
                 tag_names: document.getElementById('tag-names-hidden'),
             };
 
@@ -424,14 +434,26 @@
             }
 
             // Status buttons: set hidden value before submit
-            ['publish', 'draft', 'private'].forEach(function(action) {
-                var btn = document.getElementById('btn-' + action);
-                if (btn) {
-                    btn.addEventListener('click', function() {
-                        if (statusHidden) statusHidden.value = action;
-                    });
-                }
-            });
+            // Use DOMContentLoaded because buttons and badge are after this script in the DOM
+            function onDomReady() {
+                initBadgeEls();
+                bindStatusButtons();
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', onDomReady);
+            } else {
+                onDomReady();
+            }
+            function bindStatusButtons() {
+                ['publish', 'draft', 'private'].forEach(function(action) {
+                    var btn = document.getElementById('btn-' + action);
+                    if (btn) {
+                        btn.addEventListener('click', function() {
+                            if (statusHidden) statusHidden.value = action === 'publish' ? 'published' : action;
+                        });
+                    }
+                });
+            }
 
             // Save before unload (form submit) — cancel any pending timer and save immediately
             formEl.addEventListener('submit', function() {
@@ -440,6 +462,9 @@
                 var state = getCurrentState();
                 if (state !== lastSavedState && uniqueId) {
                     var fd = collectData();
+                    // sendBeacon cannot set custom headers (X-CSRFToken),
+                    // so pass csrf in the POST body instead (Django middleware accepts both).
+                    fd.append('csrfmiddlewaretoken', csrfToken);
                     navigator.sendBeacon('{% url "post_autosave_ajax" %}', fd);
                 }
             });
@@ -453,7 +478,9 @@
 
         <script>
         // Inline category & series creation helpers
-        var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        (function() {
+        var formEl = document.getElementById('post-form');
+        var csrfToken = formEl.querySelector('[name=csrfmiddlewaretoken]').value;
 
         function setupInlineCreate(btnId, formId, confirmId, cancelId, nameInputId, selectEl, ajaxUrl) {
             var btn = document.getElementById(btnId);
@@ -495,16 +522,17 @@
         setupInlineCreate(
             'new-category-btn', 'new-category-form', 'new-category-confirm', 'new-category-cancel',
             'new-category-name',
-            document.querySelector('select[name="category"]'),
+            formEl.querySelector('select[name="category"]'),
             '{% url "category_create_ajax" %}'
         );
 
         setupInlineCreate(
             'new-series-btn', 'new-series-form', 'new-series-confirm', 'new-series-cancel',
             'new-series-name',
-            document.querySelector('select[name="series"]'),
+            formEl.querySelector('select[name="series"]'),
             '{% url "series_create_ajax" %}'
         );
+        })();
         </script>
 
         {# Alt text prompt modal #}
@@ -527,11 +555,12 @@
         {# Image upload JS #}
         <script>
         (function() {
-            var bodyTextarea = document.querySelector('textarea[name="body"]');
+            var formEl = document.getElementById('post-form');
+            var bodyTextarea = formEl.querySelector('textarea[name="body"]');
             var fileInput = document.getElementById('image-file-input');
             var uploadBtn = document.getElementById('image-upload-btn');
             var statusEl = document.getElementById('image-upload-status');
-            var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            var csrfToken = formEl.querySelector('[name=csrfmiddlewaretoken]').value;
             var savedCursor = null;  // {start, end} saved before textarea blurs
 
             function insertAtCursor(text) {
@@ -685,14 +714,7 @@
             </span>
         </div>
 
-        {{ form.status }}
-
         <div class="flex items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-700 flex-wrap">
-            {% if form.instance.pk %}
-            <span class="text-[10px] text-slate-400 dark:text-slate-500 font-mono mr-auto">UUID: {{ form.instance.unique_id }}</span>
-            {% else %}
-            <span id="autosave-uuid" class="text-[10px] text-slate-400 dark:text-slate-500 font-mono mr-auto hidden"></span>
-            {% endif %}
             <button type="submit" id="btn-publish"
                     class="px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-indigo-500 text-white font-bold rounded-xl hover:opacity-90 transition font-mono text-sm shadow-lg shadow-cyan-500/10 dark:shadow-lg dark:shadow-cyan-500/20 min-h-[44px]">
                 {% if form.instance.pk and form.instance.status == 'published' %}更新文章{% else %}公开发布{% endif %}
@@ -705,7 +727,7 @@
                     class="px-5 py-2.5 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl hover:bg-slate-300 dark:hover:bg-slate-600 transition font-mono text-sm min-h-[44px]">
                 私密收藏
             </button>
-            <a href="{% if form.instance.pk %}{% url 'post_detail' username=form.instance.author.username slug=form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
+            <a id="cancel-link" href="{% if form.instance.pk %}{% url 'post_detail' username=form.instance.author.username slug=form.instance.slug %}{% else %}{% url 'index' %}{% endif %}"
                class="px-4 py-2.5 text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-300 transition font-mono text-sm hover:underline">
                 取消
             </a>

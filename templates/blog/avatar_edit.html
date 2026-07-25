@@ -53,6 +53,7 @@
 </div>
 
 
+<span id="avatar-csrf" hidden>{% csrf_token %}</span>
 <script>
 (function() {
     var fileInput = document.getElementById('avatar-file-input');
@@ -64,7 +65,7 @@
     var cancelBtn = document.getElementById('crop-cancel-btn');
     var statusEl = document.getElementById('crop-status');
     var currentAvatar = document.getElementById('current-avatar');
-    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    var csrfToken = document.getElementById('avatar-csrf').querySelector('[name=csrfmiddlewaretoken]').value;
 
     var dragState = { x: 0, y: 0, dragging: false, startX: 0, startY: 0 };
     var naturalW = 0, naturalH = 0;
