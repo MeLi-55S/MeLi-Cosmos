@@ -14,7 +14,21 @@ uv run python manage.py collectstatic --noinput           # static files
 ./tailwindcss-cli -i static/css/tailwind-input.css -o static/css/tailwind.min.css --minify  # rebuild CSS
 ./start.sh [dev] [port]                                  # alternative: gunicorn or runserver
 gunicorn my_cosmos.wsgi -b 127.0.0.1:9999               # production
+./sync-aliserver.sh status                               # 只读：本机/云端差在哪、服务与依赖状态
+./sync-aliserver.sh check [--skip-tests]                 # 预检：本机测试 + 云端只读体检 + 待部署提交校验
+./sync-aliserver.sh deploy --yes                         # 备份 → ff 拉代码 → 依赖/迁移/静态 → 重启 → 体检 → 不健康自动回滚
+./sync-aliserver.sh selftest                             # 离线：远端脚本语法 + dry-run 保护 + 备份/部署/回滚影子彩排
 ```
+
+Deployment goes through git: commit → `push origin main` → `./sync-aliserver.sh deploy --yes`
+(aliserver `/home/admin/blog`, systemd `blog.service`, gunicorn on 127.0.0.1:9999). Without
+`--yes` the script writes **nothing** to the cloud — it only prints the plan; it never even
+opens an ssh connection on the write paths. Every deploy first lands a mirrored backup
+(remote `$HOME/backups/<ts>` + local `~/blog-backups/<ts>`, sha256-verified both sides; the
+sqlite file is copied through the online-backup API because WAL-mode `cp` can grab half-written
+pages). The server venv has neither uv nor pip, so the deploy step bootstraps pip via
+`ensurepip` and installs `django-ninja` pinned to `uv.lock`'s version. `deploy.sh` is only a
+shim that forwards here; `start.sh` is unrelated (it runs the service on the machine itself).
 
 Env loaded from `.env` via `python-dotenv` (see `.env.example`). Project config: `my_cosmos/settings.py`.
 
