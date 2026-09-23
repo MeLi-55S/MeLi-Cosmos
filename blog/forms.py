@@ -1,7 +1,6 @@
 from django import forms
-from django.utils.text import slugify
 
-from .models import Category, Post, Memo, Series, Tag, UserProfile
+from .models import Category, Post, Memo, Series, Tag, UserProfile, parse_tag_names
 
 # Reusable widget class string for text inputs
 INPUT_CLASS = (
@@ -98,14 +97,10 @@ class PostForm(forms.ModelForm):
 
     def _save_tags(self, instance):
         raw = self.cleaned_data.get("tag_names", "")
-        names = [n.strip() for n in raw.replace(",", " ").split() if n.strip()]
-        tags = []
-        for name in names:
-            slug = slugify(name, allow_unicode=True)
-            tag, _ = Tag.objects.get_or_create(
-                slug=slug, author=self.user, defaults={"name": name}
-            )
-            tags.append(tag)
+        tags = [
+            Tag.get_or_create_for_author(name, self.user)[0]
+            for name in parse_tag_names(raw)
+        ]
         instance.tags.set(tags)
 
     def save(self, commit=True):

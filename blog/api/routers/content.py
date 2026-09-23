@@ -6,7 +6,6 @@
 
 from datetime import datetime
 from typing import Optional
-from uuid import UUID
 
 from django.db.models import Q
 from django.db.utils import IntegrityError
@@ -15,9 +14,23 @@ from ninja import Router
 
 from blog.forms import MemoForm, PostForm
 from blog.models import Memo, Post
+from blog.views import record_post_view
 
 from ..auth import BearerAuth, OptionalBearerAuth
-from ..errors import APIError, conflict, forbidden, not_found
+from ..common import (
+    ORDER_FIELDS,
+    VALID_LICENSE,
+    clamp_page_size,
+    current_user,
+    is_author,
+    post_queryset,
+    require_author,
+    resolve_post,
+    run_form,
+    validate_status,
+    visible_filter,
+)
+from ..errors import APIError, forbidden, not_found
 from ..schema import (
     MemoIn,
     MemoListOut,
@@ -26,87 +39,15 @@ from ..schema import (
     PostDetailOut,
     PostIn,
     PostListOut,
+    ViewIn,
+    ViewOut,
 )
 from ..serializers import memo_out, paginate, post_brief, post_detail
-from ..auth import BearerAuth, OptionalBearerAuth
 
 posts_router = Router()
 memos_router = Router()
 
-PAGE_SIZE_MAX = 100
-VALID_STATUS = {choice[0] for choice in Post.STATUS_CHOICES}
-VALID_LICENSE = {choice[0] for choice in Post.LICENSE_CHOICES}
-ORDER_FIELDS = {
-    "modified": "-modified_time",
-    "created": "-created_time",
-    "views": "-views",
-    "title": "title",
-}
-
-
-def _clamp_page_size(page_size):
-    return max(1, min(int(page_size or 20), PAGE_SIZE_MAX))
-
-
-def _post_queryset():
-    return Post.objects.select_related(
-        "author__profile", "category", "series"
-    ).prefetch_related("tags")
-
-
-def _is_author(request, post):
-    user = getattr(request, "user", None)
-    return bool(user is not None and user.is_authenticated and post.author_id == user.pk)
-
-
-def resolve_post(ref, request=None, author=None):
-    """按 ``unique_id`` 或 ``slug`` 取文章。
-
-    slug 在站内是"每作者唯一"，跨作者可能重复：``?author=`` 可消歧，
-    确实存在多篇同名时返回 409 而不是随便挑一篇。
-    """
-    qs = _post_queryset()
-    if author:
-        qs = qs.filter(author__username=author)
-
-    try:
-        UUID(str(ref))
-    except (ValueError, AttributeError, TypeError):
-        matches = list(qs.filter(slug=ref)[:2])
-        if not matches:
-            raise not_found("文章不存在")
-        if len(matches) > 1:
-            raise APIError(
-                409, "ambiguous_slug",
-                "该 slug 对应多位作者的文章，请改用 unique_id 或附加 ?author=<用户名>",
-            )
-        post = matches[0]
-    else:
-        post = qs.filter(unique_id=ref).first()
-        if post is None:
-            raise not_found("文章不存在")
-
-    if post.status != "published" and not (request is not None and _is_author(request, post)):
-        raise not_found("文章不存在")
-    return post
-
-
-def _require_author(request, post):
-    if not _is_author(request, post):
-        raise forbidden("只能修改自己的文章")
-    return post
-
-
-def _validate_status(status):
-    if status not in VALID_STATUS:
-        raise APIError(422, "validation_error", "status 只能是 draft / published / private")
-
-
-def _check_enums(data: "PostIn"):
-    if data.status:
-        _validate_status(data.status)
-    if data.license and data.license not in VALID_LICENSE:
-        raise APIError(422, "validation_error", "license 不在允许的取值范围内")
+DUPLICATE_TITLE = "你已有一篇相同标题（或相同 URL 别名）的文章，请修改标题。"
 
 
 def _form_payload(data: PostIn, instance=None):
@@ -136,6 +77,13 @@ def _form_payload(data: PostIn, instance=None):
     return base
 
 
+def _check_enums(data: PostIn):
+    if data.status:
+        validate_status(data.status)
+    if data.license and data.license not in VALID_LICENSE:
+        raise APIError(422, "validation_error", "license 不在允许的取值范围内")
+
+
 def _apply_series_order(post, data: PostIn):
     """``series_order`` 不在 PostForm 字段里，单独校验并落库。"""
     if "series_order" not in data.model_fields_set:
@@ -148,21 +96,6 @@ def _apply_series_order(post, data: PostIn):
         post.save(update_fields=["series_order"])
 
 
-def _validation_error(details, message):
-    err = APIError(422, "validation_error", message)
-    err.details = details
-    return err
-
-
-def _run_form(form, error_message="表单校验失败"):
-    """跑既有 Django Form 校验，失败时转成统一的 422。"""
-    if form.is_valid():
-        return form
-    details = {field: [str(e) for e in errs] for field, errs in form.errors.items()}
-    messages = [e for errs in details.values() for e in errs]
-    raise _validation_error(details, messages[0] if messages else error_message)
-
-
 # ── 文章：读 ────────────────────────────────────────────────────────────
 
 
@@ -172,8 +105,9 @@ def _run_form(form, error_message="表单校验失败"):
     auth=OptionalBearerAuth(),
     summary="文章列表",
     description=(
-        "只返回已发布文章；作者本人用 ``mine=true`` 检索自己的草稿与私密文章，"
-        "可再用 ``status`` 精确过滤。"
+        "可见性与 Web 首页一致：匿名只有已发布文章；带上作者本人的令牌时，"
+        "结果里会额外出现其草稿与私密文章。``mine=true`` 只列自己的文章，"
+        "并用 ``status`` 精确过滤。"
     ),
 )
 def list_posts(
@@ -190,21 +124,19 @@ def list_posts(
     page: int = 1,
     page_size: int = 20,
 ):
-    qs = _post_queryset()
-    user = getattr(request, "user", None)
-    is_authed = user is not None and user.is_authenticated
+    if status:
+        validate_status(status)
 
+    user = current_user(request)
     if mine:
-        if not is_authed:
+        if user is None:
             raise forbidden("mine=true 需要携带作者本人的令牌")
-        qs = qs.filter(author=user)
-        if status:
-            _validate_status(status)
-            qs = qs.filter(status=status)
+        qs = post_queryset().filter(author=user)
     else:
-        # 公开口径：只有已发布文章可被列表检索，草稿/私密一律走 mine=true
-        qs = qs.filter(status="published")
+        qs = post_queryset().filter(visible_filter(request))
 
+    if status:
+        qs = qs.filter(status=status)
     if author:
         qs = qs.filter(author__username=author)
     if category:
@@ -219,7 +151,7 @@ def list_posts(
         qs = qs.filter(modified_time__gt=since)
 
     qs = qs.order_by(ORDER_FIELDS.get(order, ORDER_FIELDS["modified"])).distinct()
-    return paginate(request, qs, page, _clamp_page_size(page_size),
+    return paginate(request, qs, page, clamp_page_size(page_size),
                     lambda post: post_brief(request, post))
 
 
@@ -233,6 +165,28 @@ def list_posts(
 def get_post(request, ref: str, author: Optional[str] = None):
     post = resolve_post(ref, request, author)
     return post_detail(request, post)
+
+
+@posts_router.post(
+    "/{ref}/view",
+    response=ViewOut,
+    auth=OptionalBearerAuth(),
+    summary="记录一次阅读（浏览计数）",
+    description=(
+        "与 Web 端 ``/ajax/view/`` 同一套冷却规则：同一指纹或同一 IP 在 "
+        "``VIEW_LOG_COOLDOWN_HOURS``（默认 1 小时）内只累加一次。"
+        "移动端应在打开文章详情后调用，否则站内统计会偏低。"
+    ),
+)
+def record_view(request, ref: str, data: ViewIn):
+    post = resolve_post(ref, request)
+    fingerprint = (data.fingerprint or "").strip()
+    if not fingerprint:
+        raise APIError(422, "validation_error", "fingerprint 不能为空")
+    # 无会话概念：冷却完全依赖指纹与 IP
+    counted = record_post_view(request, post, fingerprint[:128], use_session=False)
+    post.refresh_from_db()
+    return {"counted": counted, "views": post.views}
 
 
 # ── 文章：写 ────────────────────────────────────────────────────────────
@@ -249,14 +203,13 @@ def create_post(request, data: PostIn):
     _check_enums(data)
 
     payload = _form_payload(data)
-    form = _run_form(PostForm(data=payload, user=user, instance=Post(author=user)))
+    form = run_form(PostForm(data=payload, user=user, instance=Post(author=user)))
     try:
         post = form.save()
         _apply_series_order(post, data)
     except IntegrityError:
-        raise conflict("你已有一篇相同标题（或相同 URL 别名）的文章，请修改标题。")
-    post = _post_queryset().get(pk=post.pk)
-    return 201, post_detail(request, post)
+        raise APIError(409, "conflict", DUPLICATE_TITLE)
+    return 201, post_detail(request, post_queryset().get(pk=post.pk))
 
 
 @posts_router.patch(
@@ -267,17 +220,17 @@ def create_post(request, data: PostIn):
     description="只提交需要改动的字段；语义与 Web 端 ``/ajax/post/autosave/`` 一致。",
 )
 def update_post(request, ref: str, data: PostIn):
-    post = _require_author(request, resolve_post(ref, request))
+    post = require_author(request, resolve_post(ref, request), "只能修改自己的文章")
     _check_enums(data)
 
     payload = _form_payload(data, instance=post)
-    form = _run_form(PostForm(data=payload, user=request.user, instance=post))
+    form = run_form(PostForm(data=payload, user=request.user, instance=post))
     try:
         saved = form.save()
         _apply_series_order(saved, data)
     except IntegrityError:
-        raise conflict("你已有一篇相同标题（或相同 URL 别名）的文章，请修改标题。")
-    return post_detail(request, _post_queryset().get(pk=saved.pk))
+        raise APIError(409, "conflict", DUPLICATE_TITLE)
+    return post_detail(request, post_queryset().get(pk=saved.pk))
 
 
 @posts_router.post(
@@ -288,11 +241,11 @@ def update_post(request, ref: str, data: PostIn):
     description="与 Web 端 ``/post/<uuid>/publish/`` 相同：置为 published 并把发布时间刷到当前。",
 )
 def publish_post(request, ref: str):
-    post = _require_author(request, resolve_post(ref, request))
+    post = require_author(request, resolve_post(ref, request), "只能发布自己的文章")
     post.status = "published"
     post.created_time = timezone.now()
     post.save(update_fields=["status", "created_time"])
-    return post_detail(request, _post_queryset().get(pk=post.pk))
+    return post_detail(request, post_queryset().get(pk=post.pk))
 
 
 @posts_router.delete(
@@ -302,7 +255,7 @@ def publish_post(request, ref: str):
     summary="删除文章",
 )
 def delete_post(request, ref: str):
-    post = _require_author(request, resolve_post(ref, request))
+    post = require_author(request, resolve_post(ref, request), "只能删除自己的文章")
     post.delete()
     return {"ok": True, "detail": "文章已删除"}
 
@@ -328,15 +281,15 @@ def list_memos(
     page_size: int = 20,
 ):
     qs = Memo.objects.select_related("author__profile")
-    user = getattr(request, "user", None)
-    if user is not None and user.is_authenticated:
+    user = current_user(request)
+    if user is not None:
         qs = qs.filter(Q(is_public=True) | Q(author=user))
     else:
         qs = qs.filter(is_public=True)
     if author:
         qs = qs.filter(author__username=author)
     return paginate(request, qs.order_by("-created_time"), page,
-                    _clamp_page_size(page_size), lambda memo: memo_out(request, memo))
+                    clamp_page_size(page_size), lambda memo: memo_out(request, memo))
 
 
 @memos_router.get(
@@ -349,7 +302,7 @@ def get_memo(request, memo_id: int):
     memo = Memo.objects.select_related("author__profile").filter(pk=memo_id).first()
     if memo is None:
         raise not_found("碎碎念不存在")
-    if not memo.is_public and not _is_author(request, memo):
+    if not memo.is_public and not is_author(request, memo):
         raise not_found("碎碎念不存在")
     return memo_out(request, memo)
 
@@ -361,7 +314,7 @@ def get_memo(request, memo_id: int):
     summary="发布碎碎念",
 )
 def create_memo(request, data: MemoIn):
-    form = _run_form(MemoForm(data={"content": data.content, "is_public": data.is_public}))
+    form = run_form(MemoForm(data={"content": data.content, "is_public": data.is_public}))
     memo = form.save(commit=False)
     memo.author = request.user
     memo.save()

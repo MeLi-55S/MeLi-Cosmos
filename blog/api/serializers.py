@@ -80,6 +80,7 @@ def memo_url(memo):
 
 def post_brief(request, post):
     return schema.PostBriefOut(
+        id=post.pk,
         unique_id=str(post.unique_id),
         slug=post.slug,
         title=post.title,
@@ -102,25 +103,17 @@ def post_brief(request, post):
 def _like_state(request, obj):
     from django.contrib.contenttypes.models import ContentType
 
-    from blog.models import Like
+    from blog.views import get_like_state
 
-    ct = ContentType.objects.get_for_model(obj)
-    likes = Like.objects.filter(content_type=ct, object_id=obj.pk).select_related("user__profile")
-    count = likes.count()
-    names = [
-        l.user.profile.display_name or l.user.username
-        for l in likes.order_by("-created_time")[:2]
-    ]
     user = getattr(request, "user", None)
-    liked = bool(
-        user is not None
-        and user.is_authenticated
-        and Like.objects.filter(user=user, content_type=ct, object_id=obj.pk).exists()
+    state = get_like_state(
+        ContentType.objects.get_for_model(obj), obj.pk,
+        user if user is not None and user.is_authenticated else None,
     )
     return schema.LikeState(
-        count=count,
-        display_text=_format_like_display(names, count),
-        user_liked=liked,
+        count=state["count"],
+        display_text=state["display_text"],
+        user_liked=state["user_liked"],
     )
 
 
@@ -273,4 +266,49 @@ def token_out(api_token):
         created_at=api_token.created_at,
         last_used_at=api_token.last_used_at,
         revoked_at=api_token.revoked_at,
+    )
+
+
+def profile_out(request, user):
+    """完整资料（只给本人或管理员看得到 email）：账号端点用。"""
+    profile = user.profile
+    return schema.ProfileOut(
+        username=user.username,
+        display_name=profile.display_name or user.username,
+        title=profile.title or "",
+        bio=profile.bio or "",
+        website=profile.website or "",
+        github=profile.github or "",
+        github_username=profile.github_username or "",
+        mastodon=profile.mastodon or "",
+        email=user.email or "",
+        avatar_url=_avatar_url(profile),
+        url=absolute(request, reverse("user_space", kwargs={"username": user.username})),
+        is_staff=user.is_staff,
+        joined_at=user.date_joined,
+        stats=user_space_stats(user),
+    )
+
+
+def invite_out(request, invite):
+    return schema.InviteOut(
+        code=invite.code,
+        created_at=invite.created_at,
+        expires_at=invite.expires_at,
+        is_used=invite.is_used,
+        is_expired=invite.is_expired,
+        invitee=invite.invitee.username if invite.invitee else None,
+        url=absolute(request, reverse("register", kwargs={"code": invite.code})),
+    )
+
+
+def upload_item(obj):
+    return schema.UploadItemOut(
+        id=str(obj.id),
+        url=obj.image.url,
+        name=obj.original_filename,
+        size=obj.file_size,
+        width=obj.width,
+        height=obj.height,
+        created_time=obj.created_time,
     )

@@ -2,6 +2,7 @@
 Tests for MeLi Cosmos blog app (multi-user).
 """
 from datetime import timedelta
+import time
 from unittest.mock import patch
 
 from django.test import TestCase, Client
@@ -10,7 +11,8 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.utils import timezone
 
-from .models import Category, Tag, Post, Memo, Series, UserProfile, InviteCode, UploadedImage, Notification
+from .models import (Category, Tag, Post, Memo, Series, UserProfile, InviteCode,
+                     UploadedImage, Notification, Comment)
 from . import models as blog_models
 
 # ── 测试期间跳过 DiceBear 头像下载（避免 HTTP 超时拖慢测试）──
@@ -715,3 +717,56 @@ class NotificationTests(TestCase):
         )
         expected = reverse("memo_detail", kwargs={"username": self.author.username, "pk": memo.pk})
         self.assertEqual(notif.get_target_url(), expected)
+
+
+class RateLimitTests(TestCase):
+    """限流器在默认 LocMemCache 下的行为。
+
+    回归用例：旧实现调用只有 Redis 后端才有的 ``cache.ttl()``，用户真的触到上限时
+    不是看到"请稍后再试"，而是 500。
+    """
+
+    def setUp(self):
+        from django.core.cache import cache
+        cache.clear()
+        self.client = Client()
+        self.user = User.objects.create_user(username="flapper", password="pw")
+        self.post = Post.objects.create(
+            title="限流测试文章", body="正文内容", author=self.user, status="published",
+        )
+
+    def _comment(self, content, **extra):
+        return self.client.post(reverse("comment_create"), data={
+            "content_type": "blog.post", "object_id": self.post.pk,
+            "content": content, "next": "/",
+        }, **extra)
+
+    def test_allows_up_to_limit_then_reports_remaining_seconds(self):
+        from . import views
+        results = [views._rate_limit_check("rl:test", 3, window=120) for _ in range(5)]
+        self.assertEqual([allowed for allowed, _ in results],
+                         [True, True, True, False, False])
+        retry = results[-1][1]
+        self.assertGreater(retry, 0)
+        self.assertLessEqual(retry, 120)
+
+    def test_window_resets_after_expiry(self):
+        from . import views
+        for _ in range(3):
+            views._rate_limit_check("rl:reset", 3, window=1)
+        self.assertFalse(views._rate_limit_check("rl:reset", 3, window=1)[0])
+        time.sleep(1.2)
+        self.assertTrue(views._rate_limit_check("rl:reset", 3, window=1)[0])
+
+    def test_comment_over_limit_shows_message_instead_of_500(self):
+        from django.conf import settings
+        from django.contrib.messages import get_messages
+        self.client.login(username="flapper", password="pw")
+        limit = getattr(settings, "COMMENT_RATE_LIMIT", 5)
+        for i in range(limit):
+            self.assertEqual(self._comment(f"正常评论 {i}").status_code, 302)
+        blocked = self._comment(f"超限评论 {limit}", follow=True)
+        self.assertEqual(blocked.status_code, 200)
+        self.assertIn("评论过于频繁",
+                      "".join(m.message for m in get_messages(blocked.wsgi_request)))
+        self.assertEqual(Comment.objects.filter(user=self.user).count(), limit)

@@ -6,6 +6,9 @@
 
 ``APIError`` 继承 django-ninja 的 ``HttpError``（1.7 里没有 ``ApiError`` 这个名字），
 因此未注册自定义处理器的路由也会按 ``status_code`` 返回，而不是掉进 500。
+
+``blog.views.ContentActionError`` 是 Web 与 API 共用的"写操作失败"异常，在这里
+一并翻译：各 router 直接调用 views 里的那份实现即可，不必逐处 try/except。
 """
 
 import logging
@@ -14,6 +17,8 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, JsonResponse
 from ninja.errors import HttpError, ValidationError
+
+from blog.views import ContentActionError
 
 logger = logging.getLogger("django.request")
 
@@ -71,6 +76,8 @@ def error_body_handler(request, exc):
     if isinstance(exc, APIError):
         code, message, status = exc.code, exc.message, exc.status_code
         details = getattr(exc, "details", None)
+    elif isinstance(exc, ContentActionError):
+        code, message, status = exc.code, exc.message, exc.status
     elif isinstance(exc, ValidationError):
         code, message, status = "validation_error", "请求参数不合法", 422
         details = _validation_details(exc)

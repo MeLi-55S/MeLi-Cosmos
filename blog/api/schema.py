@@ -24,16 +24,30 @@ class CategoryRef(Schema):
     slug: str
 
 
+class CategoryOut(CategoryRef):
+    post_count: int = 0
+
+
 class TagRef(Schema):
     id: int
     name: str
     slug: str
 
 
+class TagOut(TagRef):
+    post_count: int = 0
+
+
 class SeriesRef(Schema):
     id: int
     name: str
     slug: str
+
+
+class SeriesOut(SeriesRef):
+    description: str = ""
+    author: Optional[str] = None
+    post_count: int = 0
 
 
 class LikeState(Schema):
@@ -56,6 +70,7 @@ class SeriesNavItem(Schema):
 
 
 class PostBriefOut(Schema):
+    id: int
     unique_id: str
     slug: str
     title: str
@@ -258,27 +273,19 @@ class UserListOut(Schema):
     results: List[UserPublicOut]
 
 
-class HealthOut(Schema):
-    status: str
-    database: str
-    server_time: datetime
-    django_version: str
-    api_version: str
-
-
 class CategoryListOut(Schema):
     count: int
-    results: List[CategoryRef]
+    results: List[CategoryOut]
 
 
 class TagListOut(Schema):
     count: int
-    results: List[TagRef]
+    results: List[TagOut]
 
 
 class SeriesListOut(Schema):
     count: int
-    results: List[SeriesRef]
+    results: List[SeriesOut]
 
 
 class TokenListOut(Schema):
@@ -386,3 +393,102 @@ class ProfileIn(Schema):
     website: Optional[str] = None
     github: Optional[str] = None
     email: Optional[str] = None
+
+
+# ── 浏览计数 ────────────────────────────────────────────────────────────
+
+
+class ViewIn(Schema):
+    fingerprint: str
+
+
+class ViewOut(Schema):
+    counted: bool
+    views: int
+
+
+# ── 搜索 ────────────────────────────────────────────────────────────────
+
+
+class SearchOut(Schema):
+    query: str
+    posts: List[PostBriefOut] = []
+    memos: List[MemoOut] = []
+    users: List[AuthorRef] = []
+    categories: List[CategoryOut] = []
+    tags: List[TagOut] = []
+    series: List[SeriesOut] = []
+
+
+# ── 评论 / 点赞 ─────────────────────────────────────────────────────────
+
+
+class LikeStateMapOut(Schema):
+    """``{"blog.post:12": {count, display_text, user_liked}}``，移动端列表页一次拿全。"""
+
+    states: dict
+
+
+class MarkReadIn(Schema):
+    ids: Optional[List[int]] = None
+    mark_all: bool = False
+
+
+class MarkReadOut(Schema):
+    updated: int
+    unread: int
+
+
+# ── 上传 ────────────────────────────────────────────────────────────────
+
+
+class UploadItemOut(Schema):
+    id: str
+    url: str
+    name: str
+    size: int
+    width: int
+    height: int
+    created_time: datetime
+
+
+class UploadListOut(Schema):
+    count: int
+    page: int
+    page_size: int
+    total_pages: int
+    results: List[UploadItemOut]
+
+
+# ── 账号 ────────────────────────────────────────────────────────────────
+
+
+class ProfileOut(Schema):
+    username: str
+    display_name: str
+    title: str = ""
+    bio: str = ""
+    website: str = ""
+    github: str = ""
+    github_username: str = ""
+    mastodon: str = ""
+    email: str = ""
+    avatar_url: str
+    url: str
+    is_staff: bool
+    joined_at: datetime
+    stats: dict
+
+
+class LoginOut(TokenCreatedOut):
+    user: ProfileOut
+
+
+class InviteOut(InviteCodeOut):
+    url: str = ""
+
+
+class UnreadOut(Schema):
+    """收件箱角标：移动端轮询用的最小响应。"""
+
+    unread: int

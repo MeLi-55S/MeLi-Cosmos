@@ -50,6 +50,11 @@ class Category(models.Model):
             self.slug = _unique_slug(Category, self.name, self.author) or f'category-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
 
+    @classmethod
+    def get_or_create_for_author(cls, name, author):
+        """作者维度按名称取/建分类——Web AJAX、API、表单共用这一份实现。"""
+        return _get_or_create_by_name(cls, name, author)
+
 
 class Tag(models.Model):
     name = models.CharField('标签名称', max_length=50)
@@ -70,6 +75,28 @@ class Tag(models.Model):
         if not self.slug:
             self.slug = _unique_slug(Tag, self.name, self.author) or f'tag-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
+
+    @classmethod
+    def get_or_create_for_author(cls, name, author):
+        return _get_or_create_by_name(cls, name, author)
+
+
+def _get_or_create_by_name(model_cls, name, author):
+    """把用户输入的名称映射成作者唯一的 slug 并取/建记录。
+
+    注意用的是 ``slugify(name)`` 而不是 ``save()`` 里的去重别名：同名（或 slugify
+    后同名）会复用已有记录，这是编辑页分类/标签/系列一直以来的行为。
+    """
+    from django.utils.text import slugify
+    slug = slugify(name, allow_unicode=True)
+    return model_cls.objects.get_or_create(
+        slug=slug, author=author, defaults={'name': name}
+    )
+
+
+def parse_tag_names(raw):
+    """编辑页与 API 共用：把 "a,b c" 这样的输入拆成去空白的标签名列表。"""
+    return [n.strip() for n in (raw or "").replace(",", " ").split() if n.strip()]
 
 
 class Post(models.Model):
@@ -153,6 +180,10 @@ class Series(models.Model):
         if not self.slug:
             self.slug = _unique_slug(Series, self.name, self.author) or f'series-{uuid.uuid4().hex[:8]}'
         super().save(*args, **kwargs)
+
+    @classmethod
+    def get_or_create_for_author(cls, name, author):
+        return _get_or_create_by_name(cls, name, author)
 
 
 class Memo(models.Model):
@@ -429,7 +460,7 @@ class ApiToken(models.Model):
     """移动端 / 第三方客户端使用的个人访问令牌（PAT）。
 
     只存 SHA-256 哈希，明文仅在创建时返回一次；撤销用 ``revoked_at`` 软标记。
-    认证入口见 ``blog/api/auth.py``，管理端点见 ``blog/api/routers/auth_tokens.py``。
+    认证入口见 ``blog/api/auth.py``，管理端点见 ``blog/api/routers/account.py``。
     """
 
     TOKEN_PREFIX = "mlc_"

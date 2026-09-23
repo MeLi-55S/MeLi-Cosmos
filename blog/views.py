@@ -7,6 +7,7 @@ from datetime import date, timedelta
 
 import hashlib
 import nh3
+import time
 from io import BytesIO
 
 import markdown as md_lib
@@ -156,6 +157,33 @@ def _format_like_display(names, count):
     if count <= 2:
         return "、".join(names) + " 赞了"
     return f"{names[0]}、{names[1]}等{count}人赞了"
+
+
+def get_like_state(content_type, object_id, user=None):
+    """某个对象上的点赞汇总：数量、前两名点赞者、展示文案、当前用户是否已赞。
+
+    Web 文章页/碎碎念页、``/ajax/like/toggle/`` 与 ``/api/v1`` 共用这一份实现，
+    避免文案口径出现第二套。
+    """
+    likes = Like.objects.filter(
+        content_type=content_type, object_id=object_id
+    ).select_related("user__profile")
+    count = likes.count()
+    names = [
+        like.user.profile.display_name or like.user.username
+        for like in likes.order_by("-created_time")[:2]
+    ]
+    liked = bool(
+        user is not None
+        and user.is_authenticated
+        and likes.filter(user=user).exists()
+    )
+    return {
+        "count": count,
+        "names": names,
+        "display_text": _format_like_display(names, count),
+        "user_liked": liked,
+    }
 
 
 # Markdown rendering
@@ -340,23 +368,11 @@ class PostDetailView(DetailView):
 
         # Likes
         ct = ContentType.objects.get_for_model(Post)
-        likes = Like.objects.filter(
-            content_type=ct, object_id=post.pk
-        ).select_related("user__profile")
-        context["likes_count"] = likes.count()
-        context["likes_users"] = [
-            l.user.profile.display_name or l.user.username
-            for l in likes[:2]
-        ]
-        context["likes_display_text"] = _format_like_display(
-            context["likes_users"], context["likes_count"]
-        )
-        if self.request.user.is_authenticated:
-            context["user_liked"] = Like.objects.filter(
-                user=self.request.user, content_type=ct, object_id=post.pk
-            ).exists()
-        else:
-            context["user_liked"] = False
+        state = get_like_state(ct, post.pk, self.request.user)
+        context["likes_count"] = state["count"]
+        context["likes_users"] = state["names"]
+        context["likes_display_text"] = state["display_text"]
+        context["user_liked"] = state["user_liked"]
 
         # Comments (visible + user's own pending comment)
         comments = Comment.objects.filter(
@@ -830,6 +846,57 @@ class DraftsView(LoginRequiredMixin, UserSpaceMixin, ListView):
 # Auth: Invite & Registration
 # ═══════════════════════════════════════════════════════════════════════════
 
+def invite_daily_limit_reached(user):
+    """非 staff 用户每天只能生成 INVITE_DAILY_LIMIT 个未使用的邀请码。"""
+    if user.is_staff:
+        return False
+    today_unused = InviteCode.objects.filter(
+        inviter=user,
+        created_at__date=date.today(),
+        is_used=False,
+    ).count()
+    return today_unused >= getattr(settings, "INVITE_DAILY_LIMIT", 1)
+
+
+def issue_invite_code(user):
+    """生成邀请码的唯一实现：频次校验 → 建码。超限时抛 ContentActionError。"""
+    if invite_daily_limit_reached(user):
+        raise ContentActionError(
+            "今日邀请码生成已达上限（1个/天），请明天再试。",
+            status=429, code="invite_daily_limit",
+        )
+    expire_hours = getattr(settings, "INVITE_CODE_EXPIRE_HOURS", 24)
+    return InviteCode.objects.create(
+        code=InviteCode.generate_code(),
+        inviter=user,
+        expires_at=timezone.now() + timedelta(hours=expire_hours),
+    )
+
+
+def get_usable_invite(code):
+    """按码字符串取出可用邀请码（存在、未用、未过期），否则抛 ContentActionError。"""
+    try:
+        invite = InviteCode.objects.select_related("inviter").get(code=code)
+    except InviteCode.DoesNotExist:
+        raise ContentActionError("无效的邀请码，请检查后重试。",
+                                 status=404, code="invite_not_found")
+    if invite.is_used:
+        raise ContentActionError("此邀请码已被使用。", status=409, code="invite_used")
+    if invite.is_expired:
+        raise ContentActionError("此邀请码已过期。", status=410, code="invite_expired")
+    return invite
+
+
+def consume_invite(invite, user):
+    """原子地把邀请码标记为已被该用户使用；并发下已被占用则返回 False。"""
+    updated = InviteCode.objects.filter(
+        pk=invite.pk, is_used=False
+    ).update(is_used=True, invitee=user, used_at=timezone.now())
+    if updated:
+        invite.refresh_from_db()
+    return bool(updated)
+
+
 class InviteCodeGenerateView(LoginRequiredMixin, ListView):
     """Invite code management: list + generate."""
     template_name = "blog/invite.html"
@@ -859,23 +926,11 @@ class InviteCodeGenerateView(LoginRequiredMixin, ListView):
         return context
 
     def post(self, request, *args, **kwargs):
-        # Frequency check
-        if not request.user.is_staff:
-            today_unused = InviteCode.objects.filter(
-                inviter=request.user,
-                created_at__date=date.today(),
-                is_used=False,
-            ).count()
-            if today_unused >= getattr(settings, "INVITE_DAILY_LIMIT", 1):
-                messages.error(request, "今日邀请码生成已达上限（1个/天），请明天再试。")
-                return redirect("invite")
-
-        expire_hours = getattr(settings, "INVITE_CODE_EXPIRE_HOURS", 24)
-        code = InviteCode.objects.create(
-            code=InviteCode.generate_code(),
-            inviter=request.user,
-            expires_at=timezone.now() + timedelta(hours=expire_hours),
-        )
+        try:
+            code = issue_invite_code(request.user)
+        except ContentActionError as exc:
+            messages.error(request, exc.message)
+            return redirect("invite")
         messages.success(request, f"邀请码已生成：{code.code}")
         return redirect("invite")
 
@@ -908,14 +963,10 @@ class InviteRegisterView(CreateView):
     def form_valid(self, form):
         user = form.save()
         # Atomically mark invite code as used (prevents double-use race)
-        updated = InviteCode.objects.filter(
-            pk=self.invite_code.pk, is_used=False
-        ).update(is_used=True, invitee=user, used_at=timezone.now())
-        if not updated:
+        if not consume_invite(self.invite_code, user):
             user.delete()
             messages.error(self.request, "邀请码已被使用。")
             return redirect("login")
-        self.invite_code.refresh_from_db()
         # Auto-login
         login(self.request, user)
         messages.success(self.request, f"欢迎加入 MeLi Cosmos，{user.username}！")
@@ -956,39 +1007,40 @@ class AvatarUpdateView(LoginRequiredMixin, TemplateView):
     template_name = "blog/avatar_edit.html"
 
 
-@require_POST
-def avatar_upload_ajax(request):
-    """Receive cropped avatar canvas data, process, save to profile."""
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "请先登录"}, status=403)
+def store_avatar(user, uploaded):
+    """头像上传的唯一实现：大小校验 → 处理成 WebP → 覆盖旧文件 → 落库。
 
-    uploaded = request.FILES.get("image")
-    if not uploaded:
-        return JsonResponse({"error": "未选择文件"}, status=400)
-
+    成功返回 {'url', 'width', 'height'}；任何一步不合法都抛 ContentActionError，
+    由调用方决定是回 JSON 还是 messages。
+    """
+    if uploaded is None:
+        raise ContentActionError("未选择文件", status=400, code="no_file")
     if uploaded.size > MAX_UPLOAD_SIZE:
-        return JsonResponse({"error": "文件超过10MB限制"}, status=400)
+        raise ContentActionError("文件超过10MB限制", status=400, code="too_large")
 
     raw = uploaded.read()
     try:
         webp_data, w, h = _process_image(raw)
     except Exception:
-        return JsonResponse({"error": "无法识别的图片文件"}, status=400)
+        raise ContentActionError("无法识别的图片文件", status=400, code="bad_image")
 
-    profile = request.user.profile
+    profile = user.profile
     if profile.avatar:
         profile.avatar.delete(save=False)
-    profile.avatar.save(
-        f"{request.user.username}.webp",
-        ContentFile(webp_data),
-        save=True,
-    )
+    profile.avatar.save(f"{user.username}.webp", ContentFile(webp_data), save=True)
+    return {"url": profile.avatar.url, "width": w, "height": h}
 
-    return JsonResponse({
-        "url": profile.avatar.url,
-        "width": w,
-        "height": h,
-    })
+
+@require_POST
+def avatar_upload_ajax(request):
+    """Receive cropped avatar canvas data, process, save to profile."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "请先登录"}, status=403)
+    try:
+        payload = store_avatar(request.user, request.FILES.get("image"))
+    except ContentActionError as exc:
+        return JsonResponse({"error": exc.message}, status=exc.status)
+    return JsonResponse(payload)
 
 
 class InviteCodeEntryView(TemplateView):
@@ -1001,31 +1053,67 @@ class InviteCodeEntryView(TemplateView):
             messages.error(request, "请输入邀请码。")
             return self.render_to_response(self.get_context_data())
         try:
-            invite = InviteCode.objects.get(code=code)
-            if invite.is_used:
-                messages.error(request, "此邀请码已被使用。")
-                return self.render_to_response(self.get_context_data())
-            if invite.is_expired:
-                messages.error(request, "此邀请码已过期。")
-                return self.render_to_response(self.get_context_data())
-            next_url = request.POST.get("next", "")
-            url = reverse("register", kwargs={"code": code})
-            if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=None):
-                url += "?next=" + next_url
-            return redirect(url)
-        except InviteCode.DoesNotExist:
-            messages.error(request, "无效的邀请码，请检查后重试。")
+            get_usable_invite(code)
+        except ContentActionError as exc:
+            messages.error(request, exc.message)
             return self.render_to_response(self.get_context_data())
+        next_url = request.POST.get("next", "")
+        url = reverse("register", kwargs={"code": code})
+        if next_url and url_has_allowed_host_and_scheme(next_url, allowed_hosts=None):
+            url += "?next=" + next_url
+        return redirect(url)
 
 
 # ── View Counting ─────────────────────────────────────────────────────
+
+def _view_identity_hashes(request, fingerprint):
+    """把访客的 IP / 浏览器指纹哈希成 ViewLog 用的两列（带 SECRET_KEY 盐，不可逆）。"""
+    ip = _get_client_ip(request)
+    salt = settings.SECRET_KEY
+    ip_hash = hashlib.sha256((salt + ip).encode()).hexdigest()
+    fp_hash = hashlib.sha256((salt + (fingerprint or "")).encode()).hexdigest()[:64]
+    return ip_hash, fp_hash
+
+
+def record_post_view(request, post, fingerprint, *, use_session=True):
+    """浏览计数的唯一实现：会话冷却 → 指纹/IP 冷却 → ``views+1`` + 落 ViewLog。
+
+    返回是否计数。Web 端带 session（同一浏览器会话内一篇只算一次）；
+    API 端没有会话概念，用 ``use_session=False``，冷却完全靠指纹/IP。
+    """
+    from datetime import timedelta
+
+    session_key = f"post_viewed_{post.pk}"
+    if use_session and request.session.get(session_key):
+        return False
+
+    ip_hash, fp_hash = _view_identity_hashes(request, fingerprint)
+
+    # Primary: fingerprint OR IP cooldown check (either match → block)
+    cooldown_hours = getattr(settings, "VIEW_LOG_COOLDOWN_HOURS", 1)
+    cutoff = timezone.now() - timedelta(hours=cooldown_hours)
+    if ViewLog.objects.filter(post_id=post.pk, created_at__gte=cutoff).filter(
+        Q(fingerprint_hash=fp_hash) | Q(ip_hash=ip_hash)
+    ).exists():
+        return False
+
+    with transaction.atomic():
+        Post.objects.filter(pk=post.pk).update(views=F("views") + 1)
+        ViewLog.objects.create(
+            post_id=post.pk,
+            fingerprint_hash=fp_hash,
+            ip_hash=ip_hash,
+        )
+    if use_session:
+        request.session[session_key] = True
+    return True
+
 
 @require_POST
 @csrf_exempt
 def view_count_ajax(request):
     """Record a post view based on browser fingerprint + IP hash + session."""
     import json
-    from datetime import timedelta
 
     try:
         data = json.loads(request.body)
@@ -1038,40 +1126,11 @@ def view_count_ajax(request):
     if not post_id or not fingerprint:
         return JsonResponse({"counted": False}, status=400)
 
-    x_forwarded = request.META.get("HTTP_X_FORWARDED_FOR")
-    if x_forwarded:
-        ip = x_forwarded.split(",")[0].strip()
-    else:
-        ip = request.META.get("REMOTE_ADDR", "")
+    post = Post.objects.filter(pk=post_id).first()
+    if post is None:
+        return JsonResponse({"counted": False}, status=400)
 
-    salt = settings.SECRET_KEY
-    ip_hash = hashlib.sha256((salt + ip).encode()).hexdigest()
-    fp_hash = hashlib.sha256((salt + fingerprint).encode()).hexdigest()[:64]
-
-    # Secondary: session check (AND logic — both must pass)
-    session_key = f"post_viewed_{post_id}"
-    if request.session.get(session_key):
-        return JsonResponse({"counted": False})
-
-    # Primary: fingerprint OR IP cooldown check (either match → block)
-    cooldown_hours = getattr(settings, "VIEW_LOG_COOLDOWN_HOURS", 1)
-    cutoff = timezone.now() - timedelta(hours=cooldown_hours)
-
-    if ViewLog.objects.filter(post_id=post_id, created_at__gte=cutoff).filter(
-        Q(fingerprint_hash=fp_hash) | Q(ip_hash=ip_hash)
-    ).exists():
-        return JsonResponse({"counted": False})
-
-    with transaction.atomic():
-        Post.objects.filter(pk=post_id).update(views=F("views") + 1)
-        ViewLog.objects.create(
-            post_id=post_id,
-            fingerprint_hash=fp_hash,
-            ip_hash=ip_hash,
-        )
-    request.session[session_key] = True
-
-    return JsonResponse({"counted": True})
+    return JsonResponse({"counted": record_post_view(request, post, fingerprint)})
 
 
 # ── AJAX helpers ──────────────────────────────────────────────────────
@@ -1084,12 +1143,7 @@ def category_create_ajax(request):
     name = request.POST.get("name", "").strip()
     if not name:
         return JsonResponse({"error": "分类名不能为空"}, status=400)
-    from .models import Category
-    from django.utils.text import slugify
-    slug = slugify(name, allow_unicode=True)
-    cat, created = Category.objects.get_or_create(
-        slug=slug, author=request.user, defaults={"name": name}
-    )
+    cat, created = Category.get_or_create_for_author(name, request.user)
     return JsonResponse({"id": cat.pk, "name": cat.name, "slug": cat.slug, "created": created})
 
 
@@ -1101,13 +1155,34 @@ def series_create_ajax(request):
     name = request.POST.get("name", "").strip()
     if not name:
         return JsonResponse({"error": "系列名不能为空"}, status=400)
-    from .models import Series
-    from django.utils.text import slugify
-    slug = slugify(name, allow_unicode=True)
-    ser, created = Series.objects.get_or_create(
-        slug=slug, author=request.user, defaults={"name": name}
-    )
+    ser, created = Series.get_or_create_for_author(name, request.user)
     return JsonResponse({"id": ser.pk, "name": ser.name, "slug": ser.slug, "created": created})
+
+
+def manage_series_posts(user, series_id, action, post_id):
+    """把文章挂进/移出系列，刻意不碰 ``modified_time``（auto_now）。
+
+    Web 的 AJAX 与 API 共用这一份实现；返回受影响的文章。
+    失败抛 ``ContentActionError``，由调用方决定回 JSON 还是 messages。
+    """
+    if action not in ("add", "remove") or not post_id:
+        raise ContentActionError("参数不完整", 400, "missing_argument")
+    try:
+        series_id = int(series_id)
+        post_id = int(post_id)
+    except (TypeError, ValueError):
+        raise ContentActionError("参数不完整", 400, "missing_argument")
+    series = Series.objects.filter(id=series_id, author=user).first()
+    if series is None:
+        raise ContentActionError("系列不存在", 404, "not_found")
+    post = Post.objects.filter(id=post_id, author=user).first()
+    if post is None:
+        raise ContentActionError("文章不存在", 404, "not_found")
+    if action == "add":
+        Post.objects.filter(pk=post.pk).update(series=series)
+    else:
+        Post.objects.filter(pk=post.pk).update(series=None, series_order=1)
+    return post
 
 
 @require_POST
@@ -1115,17 +1190,13 @@ def series_manage_posts_ajax(request, series_id):
     """Add or remove a post from a series without touching modified_time."""
     if not request.user.is_authenticated:
         return JsonResponse({"error": "请先登录"}, status=403)
-    series = get_object_or_404(Series, id=series_id, author=request.user)
-    action = request.POST.get("action")
-    post_id = request.POST.get("post_id")
-    if action not in ("add", "remove") or not post_id:
-        return JsonResponse({"error": "参数不完整"}, status=400)
-    post = get_object_or_404(Post, id=post_id, author=request.user)
-    if action == "add":
-        Post.objects.filter(pk=post.pk).update(series=series)
-    else:
-        Post.objects.filter(pk=post.pk).update(series=None, series_order=1)
-    return JsonResponse({"ok": True, "action": action, "post_title": post.title})
+    try:
+        post = manage_series_posts(request.user, series_id,
+                                   request.POST.get("action"), request.POST.get("post_id"))
+    except ContentActionError as exc:
+        return JsonResponse({"error": exc.message}, status=exc.status)
+    return JsonResponse({"ok": True, "action": request.POST.get("action"),
+                         "post_title": post.title})
 
 
 # ── Image Upload helpers ──────────────────────────────────────────────
@@ -1240,14 +1311,10 @@ def post_autosave_ajax(request):
 
     # Sync tags
     if tag_names_raw:
-        names = [n.strip() for n in tag_names_raw.replace(",", " ").split() if n.strip()]
-        tags = []
-        for name in names:
-            slug = slugify(name, allow_unicode=True)
-            tag, _ = Tag.objects.get_or_create(
-                slug=slug, author=request.user, defaults={"name": name}
-            )
-            tags.append(tag)
+        tags = [
+            Tag.get_or_create_for_author(name, request.user)[0]
+            for name in parse_tag_names(tag_names_raw)
+        ]
         post.tags.set(tags)
 
     return JsonResponse({
@@ -1258,18 +1325,16 @@ def post_autosave_ajax(request):
     })
 
 
-@require_POST
-def image_upload_ajax(request):
-    """Upload an image, process to WebP, deduplicate by hash, return JSON."""
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "请先登录"}, status=403)
+def store_uploaded_image(user, uploaded):
+    """图片上传的唯一实现：大小校验 → MD5 去重 → 转 WebP → 落库。
 
-    uploaded = request.FILES.get("image")
-    if not uploaded:
-        return JsonResponse({"error": "未选择文件"}, status=400)
-
+    返回与 ``/ajax/image/upload/`` 相同的字典（含 ``dedup`` 标记）；
+    失败抛 ``ContentActionError``，Web 转 JSON、API 转统一错误体。
+    """
+    if uploaded is None:
+        raise ContentActionError("未选择文件", 400, "no_file")
     if uploaded.size > MAX_UPLOAD_SIZE:
-        return JsonResponse({"error": "文件超过10MB限制"}, status=400)
+        raise ContentActionError("文件超过10MB限制", 400, "too_large")
 
     raw = uploaded.read()
     md5_hash, sha1_hash = _compute_hashes(raw)
@@ -1277,20 +1342,19 @@ def image_upload_ajax(request):
     # Dedup: check for existing image with same MD5
     existing = UploadedImage.objects.filter(md5_hash=md5_hash).first()
     if existing:
-        return JsonResponse({
+        return {
             "url": existing.image.url,
             "name": existing.original_filename,
             "size": existing.file_size,
             "width": existing.width,
             "height": existing.height,
             "dedup": True,
-        })
+        }
 
-    # Process image
     try:
         webp_data, width, height = _process_image(raw)
     except Exception:
-        return JsonResponse({"error": "无法识别的图片文件"}, status=400)
+        raise ContentActionError("无法识别的图片文件", 400, "invalid_image")
 
     obj = UploadedImage(
         original_filename=uploaded.name,
@@ -1299,19 +1363,31 @@ def image_upload_ajax(request):
         file_size=len(webp_data),
         width=width,
         height=height,
-        uploader=request.user,
+        uploader=user,
     )
     obj.image.save(f"{obj.id}.webp", ContentFile(webp_data), save=False)
     obj.save()
 
-    return JsonResponse({
+    return {
         "url": obj.image.url,
         "name": uploaded.name,
         "size": obj.file_size,
         "width": width,
         "height": height,
         "dedup": False,
-    })
+    }
+
+
+@require_POST
+def image_upload_ajax(request):
+    """Upload an image, process to WebP, deduplicate by hash, return JSON."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "请先登录"}, status=403)
+    try:
+        payload = store_uploaded_image(request.user, request.FILES.get("image"))
+    except ContentActionError as exc:
+        return JsonResponse({"error": exc.message}, status=exc.status)
+    return JsonResponse(payload)
 
 
 # ── Safe Browsing URL check ──────────────────────────────────────────
@@ -1401,18 +1477,22 @@ def _get_client_ip(request):
 
 
 def _rate_limit_check(key, limit, window=3600):
-    """Simple cache-based rate limiter. Returns (allowed: bool, retry_seconds: int)."""
-    count = cache.get(key, 0)
-    if count >= limit:
-        ttl = cache.ttl(key) or 60
-        return False, max(ttl, 1)
-    if count == 0:
-        cache.set(key, 1, window)
-    else:
-        try:
-            cache.incr(key)
-        except ValueError:
-            cache.set(key, 1, window)
+    """Simple cache-based rate limiter. Returns (allowed: bool, retry_seconds: int).
+
+    窗口截止时间跟着计数一起存：只有 Redis 后端提供 ``cache.ttl()``，本项目用的是
+    默认的 LocMemCache，原先在真正触到上限时调用它会抛 AttributeError，用户看到的
+    是 500 而不是"请稍后再试"。缓存格式换了也只是重新计时，无持久化影响。
+    """
+    now = time.monotonic()
+    entry = cache.get(key)
+    if isinstance(entry, dict) and entry.get("until", 0) > now:
+        remaining = max(int(entry["until"] - now) + 1, 1)
+        count = int(entry.get("count", 0))
+        if count >= limit:
+            return False, remaining
+        cache.set(key, {"count": count + 1, "until": entry["until"]}, remaining)
+        return True, 0
+    cache.set(key, {"count": 1, "until": now + window}, window)
     return True, 0
 
 
@@ -1423,6 +1503,84 @@ def _guest_is_trusted(email):
         user__isnull=True,
         is_visible=True,
     ).exists()
+
+
+#: 允许点赞 / 评论的内容类型（``app_label.model``）
+LIKABLE_MODELS = {"blog.post", "blog.memo"}
+
+
+class ContentActionError(Exception):
+    """点赞 / 评论等写操作的失败。
+
+    Web 视图把它转成 messages（按 ``level``），API 把它转成对应状态码的 JSON。
+    这样两端共用同一套规则，不会出现"移动端能绕过审核/限流"的情况。
+    """
+
+    def __init__(self, message, status=400, code=None, level="error", retry_after=None):
+        super().__init__(message)
+        self.message = message
+        self.status = status
+        self.code = code or "action_failed"
+        self.level = level
+        #: 限流类错误带上"多少秒后可重试"，API 会写进 Retry-After 头
+        self.retry_after = retry_after
+
+
+def resolve_content_target(content_type_key, object_id, user, verb="评论"):
+    """把 ``blog.post`` + pk 解析成 (ContentType, 对象)，并检查它对 user 是否可操作。
+
+    只允许点赞/评论文章与碎碎念——避免把任意 ContentType 变成点赞对象。
+    文案带句号：Web 端直接把 message 放进 toast，API 端按 ``code`` 分支。
+    """
+    if not content_type_key or not object_id:
+        raise ContentActionError("参数错误。", 400, "missing_argument")
+    try:
+        app_label, model = content_type_key.split(".")
+        ct = ContentType.objects.get(app_label=app_label, model=model)
+        obj = ct.get_object_for_this_type(pk=object_id)
+    except (ValueError, ContentType.DoesNotExist):
+        raise ContentActionError("内容类型无效。", 400, "invalid_content_type")
+    except ObjectDoesNotExist:
+        raise ContentActionError("内容不存在。", 404, "not_found")
+
+    if f"{ct.app_label}.{ct.model}" not in LIKABLE_MODELS:
+        raise ContentActionError("内容类型无效。", 400, "invalid_content_type")
+
+    is_owner = getattr(obj, "author", None) == user
+    if hasattr(obj, "is_public") and not obj.is_public and not is_owner:
+        raise ContentActionError(f"无法{verb}非公开内容。", 403, "forbidden")
+    if hasattr(obj, "status") and obj.status != "published" and not is_owner:
+        raise ContentActionError(f"无法{verb}未发布的内容。", 403, "forbidden")
+    return ct, obj
+
+
+def toggle_like(request, content_type_key, object_id):
+    """点赞开关：返回 ``{liked, count, display_text}``，失败抛 ContentActionError。"""
+    ct, obj = resolve_content_target(content_type_key, object_id, request.user, verb="点赞")
+
+    like, created = Like.objects.get_or_create(
+        user=request.user, content_type=ct, object_id=object_id,
+    )
+    if not created:
+        like.delete()
+    elif hasattr(obj, "author") and obj.author != request.user:
+        actor_name = request.user.profile.display_name or request.user.username
+        obj_title = getattr(obj, "title", None)
+        if obj_title:
+            message = f'{actor_name} 赞了你的文章《{obj_title}》'
+        else:
+            message = f'{actor_name} 赞了你的内容'
+        Notification.objects.create(
+            recipient=obj.author, actor=request.user, notification_type='like',
+            message=message, content_type=ct, object_id=object_id,
+        )
+
+    state = get_like_state(ct, object_id, request.user)
+    return {
+        "liked": created,
+        "count": state["count"],
+        "display_text": state["display_text"],
+    }
 
 
 @require_POST
@@ -1437,72 +1595,97 @@ def like_toggle_ajax(request):
     except (json.JSONDecodeError, AttributeError):
         return JsonResponse({"error": "无效请求"}, status=400)
 
-    content_type_key = data.get("content_type")
-    object_id = data.get("object_id")
-
-    if not content_type_key or not object_id:
-        return JsonResponse({"error": "缺少参数"}, status=400)
-
     try:
-        app_label, model = content_type_key.split(".")
-        ct = ContentType.objects.get(app_label=app_label, model=model)
-        obj = ct.get_object_for_this_type(pk=object_id)
-    except ValueError:
-        return JsonResponse({"error": "无效的内容类型"}, status=400)
-    except ContentType.DoesNotExist:
-        return JsonResponse({"error": "无效的内容类型"}, status=400)
-    except ObjectDoesNotExist:
-        return JsonResponse({"error": "内容不存在"}, status=404)
+        result = toggle_like(request, data.get("content_type"), data.get("object_id"))
+    except ContentActionError as exc:
+        return JsonResponse({"error": exc.message}, status=exc.status)
+    return JsonResponse(result)
 
-    # Check visibility
-    if hasattr(obj, "status") and obj.status != "published" and obj.author != request.user:
-        return JsonResponse({"error": "无法点赞未发布的内容"}, status=403)
-    if hasattr(obj, "is_public") and not obj.is_public and obj.author != request.user:
-        return JsonResponse({"error": "无法点赞非公开内容"}, status=403)
 
-    like, created = Like.objects.get_or_create(
-        user=request.user,
+def create_comment(request, content_type_key, object_id, content,
+                   guest_name="", guest_email=""):
+    """写入评论的唯一实现：目标校验 → 限流 → 查重 → 落库 → 通知 → 游客头像。
+
+    未登录即视为游客评论（首评要过审）。返回 ``Comment``，失败抛
+    ``ContentActionError``；待审状态由调用方按 ``comment.is_visible`` 判断。
+    """
+    is_guest = not request.user.is_authenticated
+    ct, content_object = resolve_content_target(content_type_key, object_id,
+                                                 request.user, verb="评论")
+
+    # Rate limiting
+    comment_limit = getattr(settings, 'COMMENT_RATE_LIMIT', 5)
+    if is_guest:
+        rate_key = f"comment_rate:ip:{_get_client_ip(request)}"
+    else:
+        rate_key = f"comment_rate:user:{request.user.pk}"
+    allowed, retry = _rate_limit_check(rate_key, comment_limit)
+    if not allowed:
+        minutes = max(1, retry // 60)
+        raise ContentActionError(f"评论过于频繁，请 {minutes} 分钟后再试。",
+                                429, "throttled", retry_after=retry)
+
+    # Duplicate check: same content for same target within 30s
+    dup_filter = {
+        "content_type": ct,
+        "object_id": object_id,
+        "content": content,
+        "created_time__gte": timezone.now() - timezone.timedelta(seconds=30),
+    }
+    if is_guest:
+        dup_filter["guest_email"] = (guest_email or "").strip()
+        dup_filter["user__isnull"] = True
+    else:
+        dup_filter["user"] = request.user
+    if Comment.objects.filter(**dup_filter).exists():
+        raise ContentActionError("请勿重复提交评论。", 409, "duplicate", level="warning")
+
+    # Determine moderation status
+    if is_guest:
+        comment_user = None
+        guest_name = (guest_name or "").strip()
+        guest_email = (guest_email or "").strip()
+        # First-time guest moderation
+        is_visible = _guest_is_trusted(guest_email)
+    else:
+        comment_user = request.user
+        guest_name = ""
+        guest_email = ""
+        is_visible = True
+
+    comment = Comment.objects.create(
+        user=comment_user,
+        guest_name=guest_name,
+        guest_email=guest_email,
         content_type=ct,
         object_id=object_id,
+        content=content,
+        is_visible=is_visible,
     )
 
-    if not created:
-        like.delete()
-    elif hasattr(obj, 'author') and obj.author != request.user:
+    # Notification for content author (logged-in users only, don't notify self)
+    if not is_guest and getattr(content_object, 'author', None) is not None \
+            and content_object.author != request.user:
         actor_name = request.user.profile.display_name or request.user.username
-        obj_title = getattr(obj, 'title', None)
+        obj_title = getattr(content_object, 'title', None)
         if obj_title:
-            message = f'{actor_name} 赞了你的文章《{obj_title}》'
+            notify_msg = f'{actor_name} 评论了你的文章《{obj_title}》'
         else:
-            message = f'{actor_name} 赞了你的内容'
+            notify_msg = f'{actor_name} 评论了你的内容'
         Notification.objects.create(
-            recipient=obj.author,
+            recipient=content_object.author,
             actor=request.user,
-            notification_type='like',
-            message=message,
+            notification_type='comment',
+            message=notify_msg,
             content_type=ct,
             object_id=object_id,
         )
 
-    count = Like.objects.filter(content_type=ct, object_id=object_id).count()
+    # Generate local avatar for guest comment (idempotent, no-op for logged-in)
+    if is_guest:
+        get_or_create_guest_avatar(guest_email, guest_name)
 
-    if count == 0:
-        display_text = ""
-    else:
-        top_users = Like.objects.filter(
-            content_type=ct, object_id=object_id
-        ).select_related("user__profile").order_by("-created_time")[:2]
-        names = [
-            u.user.profile.display_name or u.user.username
-            for u in top_users
-        ]
-        display_text = _format_like_display(names, count)
-
-    return JsonResponse({
-        "liked": created,
-        "count": count,
-        "display_text": display_text,
-    })
+    return comment
 
 
 @require_POST
@@ -1534,109 +1717,21 @@ def comment_create(request):
         messages.error(request, "评论失败，请重试。")
         return go()
 
-    content_type_key = request.POST.get("content_type")
-    object_id = request.POST.get("object_id")
-
-    if not content_type_key or not object_id:
-        messages.error(request, "参数错误。")
-        return go()
-
     try:
-        app_label, model = content_type_key.split(".")
-        ct = ContentType.objects.get(app_label=app_label, model=model)
-        content_object = ct.get_object_for_this_type(pk=object_id)
-    except (ValueError, ContentType.DoesNotExist, ObjectDoesNotExist):
-        messages.error(request, "评论目标不存在。")
-        return go()
-
-    # Visibility check
-    if hasattr(content_object, "is_public") and not content_object.is_public:
-        if getattr(content_object, "author", None) != request.user:
-            messages.error(request, "无法评论非公开内容。")
-            return go()
-    if hasattr(content_object, "status"):
-        if content_object.status != "published" and getattr(content_object, "author", None) != request.user:
-            messages.error(request, "无法评论未发布的内容。")
-            return go()
-
-    # Rate limiting
-    comment_limit = getattr(settings, 'COMMENT_RATE_LIMIT', 5)
-    if is_authenticated:
-        rate_key = f"comment_rate:user:{request.user.pk}"
-    else:
-        rate_key = f"comment_rate:ip:{_get_client_ip(request)}"
-    allowed, retry = _rate_limit_check(rate_key, comment_limit)
-    if not allowed:
-        minutes = max(1, retry // 60)
-        messages.error(request, f"评论过于频繁，请 {minutes} 分钟后再试。")
-        return go()
-
-    raw_content = form.cleaned_data["content"]
-
-    # Duplicate check: same content for same target within 30s
-    dup_filter = {
-        "content_type": ct,
-        "object_id": object_id,
-        "content": raw_content,
-        "created_time__gte": timezone.now() - timezone.timedelta(seconds=30),
-    }
-    if is_authenticated:
-        dup_filter["user"] = request.user
-    else:
-        dup_filter["guest_email"] = form.cleaned_data.get("guest_email", "")
-        dup_filter["user__isnull"] = True
-    if Comment.objects.filter(**dup_filter).exists():
-        messages.warning(request, "请勿重复提交评论。")
-        return go()
-
-    # Determine moderation status
-    guest_name = ""
-    guest_email = ""
-    is_visible = True
-
-    if is_authenticated:
-        comment_user = request.user
-    else:
-        comment_user = None
-        guest_name = form.cleaned_data["guest_name"].strip()
-        guest_email = form.cleaned_data["guest_email"].strip()
-
-        # First-time guest moderation
-        is_visible = _guest_is_trusted(guest_email)
-
-    comment = Comment.objects.create(
-        user=comment_user,
-        guest_name=guest_name,
-        guest_email=guest_email,
-        content_type=ct,
-        object_id=object_id,
-        content=raw_content,
-        is_visible=is_visible,
-    )
-
-    # Notification for content author (logged-in users only, don't notify self)
-    if is_authenticated and hasattr(content_object, 'author') and content_object.author != request.user:
-        actor_name = request.user.profile.display_name or request.user.username
-        obj_title = getattr(content_object, 'title', None)
-        if obj_title:
-            notify_msg = f'{actor_name} 评论了你的文章《{obj_title}》'
-        else:
-            notify_msg = f'{actor_name} 评论了你的内容'
-        Notification.objects.create(
-            recipient=content_object.author,
-            actor=request.user,
-            notification_type='comment',
-            message=notify_msg,
-            content_type=ct,
-            object_id=object_id,
+        comment = create_comment(
+            request,
+            request.POST.get("content_type"),
+            request.POST.get("object_id"),
+            form.cleaned_data["content"],
+            guest_name=form.cleaned_data.get("guest_name", ""),
+            guest_email=form.cleaned_data.get("guest_email", ""),
         )
-
-    # Generate local avatar for guest comment (idempotent, no-op for logged-in)
-    if not is_authenticated:
-        get_or_create_guest_avatar(guest_email, guest_name)
+    except ContentActionError as exc:
+        getattr(messages, exc.level)(request, exc.message)
+        return go()
 
     response = go()
-    if not is_visible:
+    if not comment.is_visible:
         # Save pending comment ID in signed cookie so the submitter can
         # always see it with "审核中" badge (persists across browser restarts)
         _add_pending_id_cookie(request, response, comment.pk)
@@ -1686,23 +1781,11 @@ class MemoDetailView(DetailView):
         ct = ContentType.objects.get_for_model(Memo)
 
         # Likes
-        likes = Like.objects.filter(
-            content_type=ct, object_id=memo.pk
-        ).select_related("user__profile")
-        context["likes_count"] = likes.count()
-        context["likes_users"] = [
-            l.user.profile.display_name or l.user.username
-            for l in likes[:2]
-        ]
-        context["likes_display_text"] = _format_like_display(
-            context["likes_users"], context["likes_count"]
-        )
-        if self.request.user.is_authenticated:
-            context["user_liked"] = Like.objects.filter(
-                user=self.request.user, content_type=ct, object_id=memo.pk
-            ).exists()
-        else:
-            context["user_liked"] = False
+        state = get_like_state(ct, memo.pk, self.request.user)
+        context["likes_count"] = state["count"]
+        context["likes_users"] = state["names"]
+        context["likes_display_text"] = state["display_text"]
+        context["user_liked"] = state["user_liked"]
 
         # Comments (visible + user's own pending comment)
         comments = Comment.objects.filter(
@@ -1798,14 +1881,20 @@ class InboxView(LoginRequiredMixin, ListView):
         ).select_related('actor__profile').order_by('-created_time')
 
 
+def mark_notifications_read(user, pks=None, all_unread=False):
+    """把收件箱通知标记为已读，返回更新条数。Web 的三个入口与 API 共用。"""
+    qs = Notification.objects.filter(recipient=user, is_read=False)
+    if not all_unread:
+        qs = qs.filter(pk__in=pks or [])
+    return qs.update(is_read=True)
+
+
 def notification_read(request, pk):
     """Mark a notification as read and redirect to its target content."""
     if not request.user.is_authenticated:
         return redirect('login')
     notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
-    if not notification.is_read:
-        notification.is_read = True
-        notification.save(update_fields=['is_read'])
+    mark_notifications_read(request.user, pks=[pk])
     target_url = notification.get_target_url()
     if target_url:
         return redirect(target_url)
@@ -1817,7 +1906,7 @@ def notification_mark_all_read(request):
     """Mark all of the current user's unread notifications as read."""
     if not request.user.is_authenticated:
         return redirect('login')
-    Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    mark_notifications_read(request.user, all_unread=True)
     return redirect('inbox')
 
 
@@ -1826,8 +1915,6 @@ def notification_mark_read(request, pk):
     """Mark a single notification as read without redirecting to its target."""
     if not request.user.is_authenticated:
         return redirect('login')
-    notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
-    if not notification.is_read:
-        notification.is_read = True
-        notification.save(update_fields=['is_read'])
+    get_object_or_404(Notification, pk=pk, recipient=request.user)
+    mark_notifications_read(request.user, pks=[pk])
     return redirect('inbox')

@@ -1,0 +1,4700 @@
+{
+  "components": {
+    "schemas": {
+      "ArchiveBucketOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "month": {
+            "title": "Month",
+            "type": "integer"
+          },
+          "posts": {
+            "items": {
+              "$ref": "#/components/schemas/PostBriefOut"
+            },
+            "title": "Posts",
+            "type": "array"
+          },
+          "year": {
+            "title": "Year",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "year",
+          "month",
+          "label",
+          "count",
+          "posts"
+        ],
+        "title": "ArchiveBucketOut",
+        "type": "object"
+      },
+      "ArchiveListOut": {
+        "properties": {
+          "buckets": {
+            "items": {
+              "$ref": "#/components/schemas/ArchiveBucketOut"
+            },
+            "title": "Buckets",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "buckets"
+        ],
+        "title": "ArchiveListOut",
+        "type": "object"
+      },
+      "AuthenticatedUserOut": {
+        "properties": {
+          "avatar_url": {
+            "title": "Avatar Url",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "is_staff": {
+            "title": "Is Staff",
+            "type": "boolean"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TokenOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "display_name",
+          "is_staff",
+          "avatar_url",
+          "url"
+        ],
+        "title": "AuthenticatedUserOut",
+        "type": "object"
+      },
+      "AuthorRef": {
+        "properties": {
+          "avatar_url": {
+            "title": "Avatar Url",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "display_name",
+          "avatar_url"
+        ],
+        "title": "AuthorRef",
+        "type": "object"
+      },
+      "AvatarOut": {
+        "properties": {
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "width",
+          "height"
+        ],
+        "title": "AvatarOut",
+        "type": "object"
+      },
+      "CategoryListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/CategoryOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "CategoryListOut",
+        "type": "object"
+      },
+      "CategoryOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "post_count": {
+            "default": 0,
+            "title": "Post Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "CategoryOut",
+        "type": "object"
+      },
+      "CategoryRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "CategoryRef",
+        "type": "object"
+      },
+      "CommentIn": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "guest_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Email"
+          },
+          "guest_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Guest Name"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "integer"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "required": [
+          "content_type",
+          "object_id",
+          "content"
+        ],
+        "title": "CommentIn",
+        "type": "object"
+      },
+      "CommentListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/CommentOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "page",
+          "page_size",
+          "total_pages",
+          "results"
+        ],
+        "title": "CommentListOut",
+        "type": "object"
+      },
+      "CommentOut": {
+        "properties": {
+          "avatar_url": {
+            "title": "Avatar Url",
+            "type": "string"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_time": {
+            "format": "date-time",
+            "title": "Created Time",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_guest": {
+            "title": "Is Guest",
+            "type": "boolean"
+          },
+          "is_pending": {
+            "title": "Is Pending",
+            "type": "boolean"
+          },
+          "is_visible": {
+            "title": "Is Visible",
+            "type": "boolean"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "display_name",
+          "avatar_url",
+          "is_guest",
+          "is_visible",
+          "is_pending",
+          "created_time",
+          "content_type",
+          "object_id"
+        ],
+        "title": "CommentOut",
+        "type": "object"
+      },
+      "HealthOut": {
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "database": {
+            "title": "Database",
+            "type": "string"
+          },
+          "django_version": {
+            "title": "Django Version",
+            "type": "string"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database",
+          "server_time",
+          "django_version",
+          "api_version"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      },
+      "InviteCodeOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "invitee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitee"
+          },
+          "is_expired": {
+            "title": "Is Expired",
+            "type": "boolean"
+          },
+          "is_used": {
+            "title": "Is Used",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "created_at",
+          "expires_at",
+          "is_used",
+          "is_expired"
+        ],
+        "title": "InviteCodeOut",
+        "type": "object"
+      },
+      "InviteListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/InviteCodeOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "InviteListOut",
+        "type": "object"
+      },
+      "InviteOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "invitee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitee"
+          },
+          "is_expired": {
+            "title": "Is Expired",
+            "type": "boolean"
+          },
+          "is_used": {
+            "title": "Is Used",
+            "type": "boolean"
+          },
+          "url": {
+            "default": "",
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "created_at",
+          "expires_at",
+          "is_used",
+          "is_expired"
+        ],
+        "title": "InviteOut",
+        "type": "object"
+      },
+      "LikeIn": {
+        "properties": {
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "content_type",
+          "object_id"
+        ],
+        "title": "LikeIn",
+        "type": "object"
+      },
+      "LikeOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "display_text": {
+            "title": "Display Text",
+            "type": "string"
+          },
+          "liked": {
+            "title": "Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "liked",
+          "count",
+          "display_text"
+        ],
+        "title": "LikeOut",
+        "type": "object"
+      },
+      "LikeState": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "display_text": {
+            "title": "Display Text",
+            "type": "string"
+          },
+          "user_liked": {
+            "title": "User Liked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "count",
+          "display_text",
+          "user_liked"
+        ],
+        "title": "LikeState",
+        "type": "object"
+      },
+      "LikeStateMapOut": {
+        "description": "``{\"blog.post:12\": {count, display_text, user_liked}}``，移动端列表页一次拿全。",
+        "properties": {
+          "states": {
+            "additionalProperties": true,
+            "title": "States",
+            "type": "object"
+          }
+        },
+        "required": [
+          "states"
+        ],
+        "title": "LikeStateMapOut",
+        "type": "object"
+      },
+      "LoginIn": {
+        "properties": {
+          "device_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "mobile",
+            "title": "Device Name"
+          },
+          "password": {
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginIn",
+        "type": "object"
+      },
+      "LoginOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/ProfileOut"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "created_at",
+          "token",
+          "hint",
+          "user"
+        ],
+        "title": "LoginOut",
+        "type": "object"
+      },
+      "MarkReadIn": {
+        "properties": {
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          },
+          "mark_all": {
+            "default": false,
+            "title": "Mark All",
+            "type": "boolean"
+          }
+        },
+        "title": "MarkReadIn",
+        "type": "object"
+      },
+      "MarkReadOut": {
+        "properties": {
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated",
+          "unread"
+        ],
+        "title": "MarkReadOut",
+        "type": "object"
+      },
+      "MemoIn": {
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "is_public": {
+            "default": true,
+            "title": "Is Public",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "title": "MemoIn",
+        "type": "object"
+      },
+      "MemoListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/MemoOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "page",
+          "page_size",
+          "total_pages",
+          "results"
+        ],
+        "title": "MemoListOut",
+        "type": "object"
+      },
+      "MemoOut": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AuthorRef"
+          },
+          "comments_count": {
+            "title": "Comments Count",
+            "type": "integer"
+          },
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "created_time": {
+            "format": "date-time",
+            "title": "Created Time",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_public": {
+            "title": "Is Public",
+            "type": "boolean"
+          },
+          "likes": {
+            "$ref": "#/components/schemas/LikeState"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "content",
+          "is_public",
+          "url",
+          "author",
+          "created_time",
+          "likes",
+          "comments_count"
+        ],
+        "title": "MemoOut",
+        "type": "object"
+      },
+      "NameIn": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "NameIn",
+        "type": "object"
+      },
+      "NotificationListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "page",
+          "page_size",
+          "total_pages",
+          "unread",
+          "results"
+        ],
+        "title": "NotificationListOut",
+        "type": "object"
+      },
+      "NotificationOut": {
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AuthorRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "content_type": {
+            "title": "Content Type",
+            "type": "string"
+          },
+          "created_time": {
+            "format": "date-time",
+            "title": "Created Time",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_read": {
+            "title": "Is Read",
+            "type": "boolean"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "notification_type": {
+            "title": "Notification Type",
+            "type": "string"
+          },
+          "object_id": {
+            "title": "Object Id",
+            "type": "integer"
+          },
+          "target_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Url"
+          },
+          "type_display": {
+            "title": "Type Display",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "notification_type",
+          "type_display",
+          "message",
+          "is_read",
+          "created_time",
+          "content_type",
+          "object_id"
+        ],
+        "title": "NotificationOut",
+        "type": "object"
+      },
+      "OkOut": {
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "ok": {
+            "default": true,
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "title": "OkOut",
+        "type": "object"
+      },
+      "PostBriefOut": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AuthorRef"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CategoryRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cover": {
+            "default": "",
+            "title": "Cover",
+            "type": "string"
+          },
+          "created_time": {
+            "format": "date-time",
+            "title": "Created Time",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "license": {
+            "title": "License",
+            "type": "string"
+          },
+          "modified_time": {
+            "format": "date-time",
+            "title": "Modified Time",
+            "type": "string"
+          },
+          "read_minutes": {
+            "title": "Read Minutes",
+            "type": "integer"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unique_id": {
+            "title": "Unique Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "unique_id",
+          "slug",
+          "title",
+          "excerpt",
+          "status",
+          "license",
+          "views",
+          "read_minutes",
+          "url",
+          "created_time",
+          "modified_time",
+          "author"
+        ],
+        "title": "PostBriefOut",
+        "type": "object"
+      },
+      "PostDetailOut": {
+        "properties": {
+          "author": {
+            "$ref": "#/components/schemas/AuthorRef"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "body_html": {
+            "title": "Body Html",
+            "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CategoryRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comments_count": {
+            "title": "Comments Count",
+            "type": "integer"
+          },
+          "cover": {
+            "default": "",
+            "title": "Cover",
+            "type": "string"
+          },
+          "created_time": {
+            "format": "date-time",
+            "title": "Created Time",
+            "type": "string"
+          },
+          "excerpt": {
+            "title": "Excerpt",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "license": {
+            "title": "License",
+            "type": "string"
+          },
+          "likes": {
+            "$ref": "#/components/schemas/LikeState"
+          },
+          "modified_time": {
+            "format": "date-time",
+            "title": "Modified Time",
+            "type": "string"
+          },
+          "read_minutes": {
+            "title": "Read Minutes",
+            "type": "integer"
+          },
+          "related": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PostBriefOut"
+            },
+            "title": "Related",
+            "type": "array"
+          },
+          "series": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "series_nav": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesNav"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "toc_html": {
+            "default": "",
+            "title": "Toc Html",
+            "type": "string"
+          },
+          "unique_id": {
+            "title": "Unique Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "unique_id",
+          "slug",
+          "title",
+          "excerpt",
+          "status",
+          "license",
+          "views",
+          "read_minutes",
+          "url",
+          "created_time",
+          "modified_time",
+          "author",
+          "body",
+          "body_html",
+          "likes",
+          "comments_count"
+        ],
+        "title": "PostDetailOut",
+        "type": "object"
+      },
+      "PostIn": {
+        "description": "创建 / 更新文章。更新时省略的字段表示不改动。",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "cover": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "license": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "License"
+          },
+          "series_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Id"
+          },
+          "series_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Series Order"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "tag_names": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Names"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "PostIn",
+        "type": "object"
+      },
+      "PostListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/PostBriefOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "page",
+          "page_size",
+          "total_pages",
+          "results"
+        ],
+        "title": "PostListOut",
+        "type": "object"
+      },
+      "ProfileIn": {
+        "properties": {
+          "bio": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bio"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "github": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Github"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "title": "ProfileIn",
+        "type": "object"
+      },
+      "ProfileOut": {
+        "properties": {
+          "avatar_url": {
+            "title": "Avatar Url",
+            "type": "string"
+          },
+          "bio": {
+            "default": "",
+            "title": "Bio",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "default": "",
+            "title": "Email",
+            "type": "string"
+          },
+          "github": {
+            "default": "",
+            "title": "Github",
+            "type": "string"
+          },
+          "github_username": {
+            "default": "",
+            "title": "Github Username",
+            "type": "string"
+          },
+          "is_staff": {
+            "title": "Is Staff",
+            "type": "boolean"
+          },
+          "joined_at": {
+            "format": "date-time",
+            "title": "Joined At",
+            "type": "string"
+          },
+          "mastodon": {
+            "default": "",
+            "title": "Mastodon",
+            "type": "string"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "title": "Stats",
+            "type": "object"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "website": {
+            "default": "",
+            "title": "Website",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "display_name",
+          "avatar_url",
+          "url",
+          "is_staff",
+          "joined_at",
+          "stats"
+        ],
+        "title": "ProfileOut",
+        "type": "object"
+      },
+      "RegisterIn": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "device_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "mobile",
+            "title": "Device Name"
+          },
+          "password1": {
+            "title": "Password1",
+            "type": "string"
+          },
+          "password2": {
+            "title": "Password2",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "username",
+          "password1",
+          "password2"
+        ],
+        "title": "RegisterIn",
+        "type": "object"
+      },
+      "SearchOut": {
+        "properties": {
+          "categories": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/CategoryOut"
+            },
+            "title": "Categories",
+            "type": "array"
+          },
+          "memos": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/MemoOut"
+            },
+            "title": "Memos",
+            "type": "array"
+          },
+          "posts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/PostBriefOut"
+            },
+            "title": "Posts",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "series": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/SeriesOut"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "tags": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/TagOut"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "users": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AuthorRef"
+            },
+            "title": "Users",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "SearchOut",
+        "type": "object"
+      },
+      "SeriesIn": {
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": "",
+            "title": "Description"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "SeriesIn",
+        "type": "object"
+      },
+      "SeriesListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SeriesOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "SeriesListOut",
+        "type": "object"
+      },
+      "SeriesNav": {
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesNavItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "prev": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SeriesNavItem"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "series": {
+            "$ref": "#/components/schemas/SeriesRef"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "series",
+          "index",
+          "total"
+        ],
+        "title": "SeriesNav",
+        "type": "object"
+      },
+      "SeriesNavItem": {
+        "description": "系列前后篇的轻量表示（只含导航需要的字段）。",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "series_order": {
+            "title": "Series Order",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "slug",
+          "title",
+          "url",
+          "series_order"
+        ],
+        "title": "SeriesNavItem",
+        "type": "object"
+      },
+      "SeriesOut": {
+        "properties": {
+          "author": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author"
+          },
+          "description": {
+            "default": "",
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "post_count": {
+            "default": 0,
+            "title": "Post Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "SeriesOut",
+        "type": "object"
+      },
+      "SeriesPostIn": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "post_id": {
+            "title": "Post Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "action",
+          "post_id"
+        ],
+        "title": "SeriesPostIn",
+        "type": "object"
+      },
+      "SeriesRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "SeriesRef",
+        "type": "object"
+      },
+      "SiteMetaOut": {
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "auth": {
+            "additionalProperties": true,
+            "title": "Auth",
+            "type": "object"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "docs_url": {
+            "title": "Docs Url",
+            "type": "string"
+          },
+          "features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Features",
+            "type": "array"
+          },
+          "site_name": {
+            "title": "Site Name",
+            "type": "string"
+          },
+          "totals": {
+            "additionalProperties": true,
+            "title": "Totals",
+            "type": "object"
+          }
+        },
+        "required": [
+          "site_name",
+          "display_name",
+          "base_url",
+          "api_version",
+          "docs_url",
+          "totals",
+          "auth",
+          "features"
+        ],
+        "title": "SiteMetaOut",
+        "type": "object"
+      },
+      "TagListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TagOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "TagListOut",
+        "type": "object"
+      },
+      "TagOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "post_count": {
+            "default": 0,
+            "title": "Post Count",
+            "type": "integer"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "TagOut",
+        "type": "object"
+      },
+      "TagRef": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug"
+        ],
+        "title": "TagRef",
+        "type": "object"
+      },
+      "TokenCreatedOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "hint": {
+            "title": "Hint",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "created_at",
+          "token",
+          "hint"
+        ],
+        "title": "TokenCreatedOut",
+        "type": "object"
+      },
+      "TokenListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/TokenOut"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "results"
+        ],
+        "title": "TokenListOut",
+        "type": "object"
+      },
+      "TokenNameIn": {
+        "properties": {
+          "name": {
+            "default": "mobile",
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "title": "TokenNameIn",
+        "type": "object"
+      },
+      "TokenOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "prefix",
+          "created_at"
+        ],
+        "title": "TokenOut",
+        "type": "object"
+      },
+      "UnreadOut": {
+        "description": "收件箱角标：移动端轮询用的最小响应。",
+        "properties": {
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "unread"
+        ],
+        "title": "UnreadOut",
+        "type": "object"
+      },
+      "UploadItemOut": {
+        "properties": {
+          "created_time": {
+            "format": "date-time",
+            "title": "Created Time",
+            "type": "string"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "name",
+          "size",
+          "width",
+          "height",
+          "created_time"
+        ],
+        "title": "UploadItemOut",
+        "type": "object"
+      },
+      "UploadListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/UploadItemOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "page",
+          "page_size",
+          "total_pages",
+          "results"
+        ],
+        "title": "UploadListOut",
+        "type": "object"
+      },
+      "UploadOut": {
+        "properties": {
+          "dedup": {
+            "title": "Dedup",
+            "type": "boolean"
+          },
+          "height": {
+            "title": "Height",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "width": {
+            "title": "Width",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "url",
+          "name",
+          "size",
+          "width",
+          "height",
+          "dedup"
+        ],
+        "title": "UploadOut",
+        "type": "object"
+      },
+      "UserListOut": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/UserPublicOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "total_pages": {
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count",
+          "page",
+          "page_size",
+          "total_pages",
+          "results"
+        ],
+        "title": "UserListOut",
+        "type": "object"
+      },
+      "UserPublicOut": {
+        "properties": {
+          "avatar_url": {
+            "title": "Avatar Url",
+            "type": "string"
+          },
+          "bio": {
+            "default": "",
+            "title": "Bio",
+            "type": "string"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "github": {
+            "default": "",
+            "title": "Github",
+            "type": "string"
+          },
+          "joined_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Joined At"
+          },
+          "mastodon": {
+            "default": "",
+            "title": "Mastodon",
+            "type": "string"
+          },
+          "stats": {
+            "additionalProperties": true,
+            "title": "Stats",
+            "type": "object"
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          },
+          "website": {
+            "default": "",
+            "title": "Website",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "display_name",
+          "avatar_url",
+          "url",
+          "stats"
+        ],
+        "title": "UserPublicOut",
+        "type": "object"
+      },
+      "ViewIn": {
+        "properties": {
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          }
+        },
+        "required": [
+          "fingerprint"
+        ],
+        "title": "ViewIn",
+        "type": "object"
+      },
+      "ViewOut": {
+        "properties": {
+          "counted": {
+            "title": "Counted",
+            "type": "boolean"
+          },
+          "views": {
+            "title": "Views",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "counted",
+          "views"
+        ],
+        "title": "ViewOut",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "OptionalBearerAuth": {
+        "bearerFormat": "opaque",
+        "description": "可选。省略时为匿名访问；带上作者本人的令牌可读到草稿与私密内容",
+        "scheme": "bearer",
+        "type": "http"
+      },
+      "SessionOrBearerAuth": {
+        "bearerFormat": "opaque",
+        "description": "Bearer mlc_xxx；浏览器访问时也可用已登录的会话 Cookie（需带 X-CSRFToken）",
+        "scheme": "bearer",
+        "type": "http"
+      }
+    }
+  },
+  "info": {
+    "description": "MeLi Cosmos 的公开 REST API，供移动端与第三方客户端使用。\n\n**认证**：站内「账号设置 → 访问令牌」或 `POST /api/v1/auth/login` 签发 `mlc_` 开头的\n个人访问令牌（PAT），后续请求带上 `Authorization: Bearer mlc_xxx`。明文令牌只在签发时\n返回一次，库里只存 SHA-256 哈希。\n\n**可见性**：匿名只读已发布内容；带作者本人的令牌可读写其草稿与私密内容。\n\n**错误格式**：所有非 2xx 响应体形如 `{\"error\": {\"code\": \"not_found\", \"message\": \"…\"}}`，\n参数错误额外带 `details`；限流响应带 `Retry-After` 头。\n\n**与 Web 同源**：Markdown 渲染、点赞文案、评论审核与限流、图片处理、邀请码规则都由\n`blog/views.py` 与 `blog/forms.py` 的既有实现提供，移动端拿不到任何 Web 端没有的权限。\n",
+    "title": "MeLi Cosmos API",
+    "version": "v1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/account/invites": {
+      "get": {
+        "operationId": "blog_api_routers_account_list_invites",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "我发出的邀请码",
+        "tags": [
+          "账号"
+        ]
+      },
+      "post": {
+        "description": "频次限制与站内一致：非管理员每个自然日最多 1 个未使用的邀请码，超限返回 429。",
+        "operationId": "blog_api_routers_account_create_invite",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InviteOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "生成邀请码",
+        "tags": [
+          "账号"
+        ]
+      }
+    },
+    "/api/v1/account/profile": {
+      "get": {
+        "operationId": "blog_api_routers_account_get_profile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "我的资料",
+        "tags": [
+          "账号"
+        ]
+      },
+      "patch": {
+        "description": "字段规则与站内「编辑资料」页完全相同（含 GitHub 用户名自动补全为 URL）。未提交的字段保持不变；Mastodon 与头像不在本端点范围内。",
+        "operationId": "blog_api_routers_account_update_profile",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "修改我的资料",
+        "tags": [
+          "账号"
+        ]
+      }
+    },
+    "/api/v1/archives": {
+      "get": {
+        "description": "按年月分组的已发布文章，口径与 Web 的 ``/archives/`` 相同；``author`` 限定某位作者，``year`` / ``month`` 精确到某个月。",
+        "operationId": "blog_api_routers_discovery_archives",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Year"
+            }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Month"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "时间归档",
+        "tags": [
+          "发现"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "description": "不建立浏览器会话：成功只返回一个 PAT，之后所有请求都带 ``Authorization: Bearer mlc_...``。连续失败会被限流（5 次 / 300 秒）。",
+        "operationId": "blog_api_routers_account_login",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "用户名 + 密码换取访问令牌",
+        "tags": [
+          "认证与令牌"
+        ]
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "带令牌时撤销当前令牌（其他令牌不受影响）；带会话时清除会话。",
+        "operationId": "blog_api_routers_account_logout",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "退出登录",
+        "tags": [
+          "认证与令牌"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "description": "带令牌时 ``token`` 字段就是本次请求使用的令牌（含最后使用时间）。",
+        "operationId": "blog_api_routers_account_me",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticatedUserOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "当前身份",
+        "tags": [
+          "认证与令牌"
+        ]
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "description": "站内注册一直要求邀请码，API 同样如此。字段规则复用 Django 的 ``UserCreationForm``（长度、两次密码一致、弱密码校验）。",
+        "operationId": "blog_api_routers_account_register",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "summary": "邀请码注册并换取令牌",
+        "tags": [
+          "认证与令牌"
+        ]
+      }
+    },
+    "/api/v1/auth/tokens": {
+      "get": {
+        "description": "只返回令牌元信息（名称、前缀 12 位、使用时间），永不返回明文或哈希。",
+        "operationId": "blog_api_routers_account_list_tokens",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "我的令牌列表",
+        "tags": [
+          "认证与令牌"
+        ]
+      },
+      "post": {
+        "description": "每个账号最多 10 个有效令牌。明文只在这次响应里出现一次。",
+        "operationId": "blog_api_routers_account_create_token",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenNameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenCreatedOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "新建令牌",
+        "tags": [
+          "认证与令牌"
+        ]
+      }
+    },
+    "/api/v1/auth/tokens/{token_id}": {
+      "delete": {
+        "description": "软撤销：保留记录用于审计，令牌立即失效。允许撤销当前正在使用的令牌。",
+        "operationId": "blog_api_routers_account_revoke_token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "token_id",
+            "required": true,
+            "schema": {
+              "title": "Token Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "撤销令牌",
+        "tags": [
+          "认证与令牌"
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "description": "匿名只看到挂有已发布文章的分类；带令牌时额外看到自己尚未使用的分类。",
+        "operationId": "blog_api_routers_taxonomy_list_categories",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "分类列表",
+        "tags": [
+          "分类法"
+        ]
+      },
+      "post": {
+        "description": "与 Web 端 ``/ajax/category/create/`` 同一实现：同名分类复用，不重复创建。",
+        "operationId": "blog_api_routers_taxonomy_create_category",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "新建分类",
+        "tags": [
+          "分类法"
+        ]
+      }
+    },
+    "/api/v1/comments": {
+      "get": {
+        "description": "给定 ``content_type`` + ``object_id`` 列某篇内容的评论；不带参数则列全站最新评论。匿名只看到已过审的评论，登录用户额外看到自己待审的那些（``is_pending=true``）。",
+        "operationId": "blog_api_routers_social_list_comments",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "content_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Content Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "object_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Object Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Mine",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "评论列表",
+        "tags": [
+          "评论与点赞"
+        ]
+      },
+      "post": {
+        "description": "登录用户直接可见（201）；游客的首条评论要过审，返回 202 与 ``is_pending=true``，同一邮箱有过审历史后自动直发。字段规则、限流与蜜罐检测与 Web 完全一致。",
+        "operationId": "blog_api_routers_social_create_comment_endpoint",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentOut"
+                }
+              }
+            },
+            "description": "Accepted"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "发表评论",
+        "tags": [
+          "评论与点赞"
+        ]
+      }
+    },
+    "/api/v1/comments/{comment_id}": {
+      "get": {
+        "operationId": "blog_api_routers_social_get_comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "title": "Comment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "评论详情",
+        "tags": [
+          "评论与点赞"
+        ]
+      }
+    },
+    "/api/v1/comments/{comment_id}/visibility": {
+      "post": {
+        "description": "与 Web 管理界面的审核开关同一动作：切换 ``is_visible``。",
+        "operationId": "blog_api_routers_social_toggle_comment_visibility",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "title": "Comment Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "上/下架评论（仅管理员）",
+        "tags": [
+          "评论与点赞"
+        ]
+      }
+    },
+    "/api/v1/health": {
+      "get": {
+        "description": "探针用：确认进程活着且能查询数据库。",
+        "operationId": "blog_api_routers_meta_health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "健康检查",
+        "tags": [
+          "站点"
+        ]
+      }
+    },
+    "/api/v1/inbox": {
+      "get": {
+        "description": "``unread_only=true`` 只看未读；``type`` 可按 comment / reply / like / system 过滤。",
+        "operationId": "blog_api_routers_inbox_list_notifications",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "unread_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "通知列表",
+        "tags": [
+          "收件箱"
+        ]
+      }
+    },
+    "/api/v1/inbox/read": {
+      "post": {
+        "description": "``mark_all=true`` 全部已读；否则按 ``ids`` 逐条标记（不属于你的通知会被忽略）。",
+        "operationId": "blog_api_routers_inbox_mark_read",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkReadIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarkReadOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "标记已读",
+        "tags": [
+          "收件箱"
+        ]
+      }
+    },
+    "/api/v1/inbox/unread": {
+      "get": {
+        "operationId": "blog_api_routers_inbox_unread_count",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "未读数量（角标）",
+        "tags": [
+          "收件箱"
+        ]
+      }
+    },
+    "/api/v1/likes": {
+      "get": {
+        "description": "``targets=blog.post:1,blog.memo:2``，一次拿回列表页所有卡片的点赞数；未过审或无权访问的内容不会出现在结果里。",
+        "operationId": "blog_api_routers_social_like_states",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "targets",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Targets",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeStateMapOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "批量查询点赞状态",
+        "tags": [
+          "评论与点赞"
+        ]
+      },
+      "post": {
+        "description": "开关语义与 Web 的心形按钮一致：已赞则取消，未赞则点赞并通知作者。",
+        "operationId": "blog_api_routers_social_like_toggle",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LikeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LikeOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "点赞 / 取消点赞",
+        "tags": [
+          "评论与点赞"
+        ]
+      }
+    },
+    "/api/v1/memos": {
+      "get": {
+        "description": "返回公开碎碎念；带令牌时额外返回本人的非公开内容。注意：Web 端 ``/memos/`` 会让任意登录用户看到他人的非公开碎碎念，API 刻意不复制这一行为。",
+        "operationId": "blog_api_routers_content_list_memos",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "碎碎念列表",
+        "tags": [
+          "碎碎念"
+        ]
+      },
+      "post": {
+        "operationId": "blog_api_routers_content_create_memo",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemoIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "发布碎碎念",
+        "tags": [
+          "碎碎念"
+        ]
+      }
+    },
+    "/api/v1/memos/{memo_id}": {
+      "delete": {
+        "operationId": "blog_api_routers_content_delete_memo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memo_id",
+            "required": true,
+            "schema": {
+              "title": "Memo Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "删除碎碎念",
+        "tags": [
+          "碎碎念"
+        ]
+      },
+      "get": {
+        "operationId": "blog_api_routers_content_get_memo",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "memo_id",
+            "required": true,
+            "schema": {
+              "title": "Memo Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemoOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "碎碎念详情",
+        "tags": [
+          "碎碎念"
+        ]
+      }
+    },
+    "/api/v1/meta": {
+      "get": {
+        "description": "移动端启动时拉一次：站点名、总量统计、认证方式与能力开关。",
+        "operationId": "blog_api_routers_meta_site_meta",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteMetaOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "summary": "站点与 API 元信息",
+        "tags": [
+          "站点"
+        ]
+      }
+    },
+    "/api/v1/posts": {
+      "get": {
+        "description": "可见性与 Web 首页一致：匿名只有已发布文章；带上作者本人的令牌时，结果里会额外出现其草稿与私密文章。``mine=true`` 只列自己的文章，并用 ``status`` 精确过滤。",
+        "operationId": "blog_api_routers_content_list_posts",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          },
+          {
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Category"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag"
+            }
+          },
+          {
+            "in": "query",
+            "name": "series",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Series"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mine",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Mine",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "modified",
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "文章列表",
+        "tags": [
+          "文章"
+        ]
+      },
+      "post": {
+        "operationId": "blog_api_routers_content_create_post",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailOut"
+                }
+              }
+            },
+            "description": "Created"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "创建文章",
+        "tags": [
+          "文章"
+        ]
+      }
+    },
+    "/api/v1/posts/{ref}": {
+      "delete": {
+        "operationId": "blog_api_routers_content_delete_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "删除文章",
+        "tags": [
+          "文章"
+        ]
+      },
+      "get": {
+        "description": "``ref`` 可为 ``unique_id``（推荐）或 ``slug``；slug 重复时用 ``?author=`` 消歧。",
+        "operationId": "blog_api_routers_content_get_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "文章详情",
+        "tags": [
+          "文章"
+        ]
+      },
+      "patch": {
+        "description": "只提交需要改动的字段；语义与 Web 端 ``/ajax/post/autosave/`` 一致。",
+        "operationId": "blog_api_routers_content_update_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "更新文章（可作自动保存）",
+        "tags": [
+          "文章"
+        ]
+      }
+    },
+    "/api/v1/posts/{ref}/publish": {
+      "post": {
+        "description": "与 Web 端 ``/post/<uuid>/publish/`` 相同：置为 published 并把发布时间刷到当前。",
+        "operationId": "blog_api_routers_content_publish_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetailOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "发布文章",
+        "tags": [
+          "文章"
+        ]
+      }
+    },
+    "/api/v1/posts/{ref}/view": {
+      "post": {
+        "description": "与 Web 端 ``/ajax/view/`` 同一套冷却规则：同一指纹或同一 IP 在 ``VIEW_LOG_COOLDOWN_HOURS``（默认 1 小时）内只累加一次。移动端应在打开文章详情后调用，否则站内统计会偏低。",
+        "operationId": "blog_api_routers_content_record_view",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ref",
+            "required": true,
+            "schema": {
+              "title": "Ref",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ViewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ViewOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "记录一次阅读（浏览计数）",
+        "tags": [
+          "文章"
+        ]
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "description": "与 Web 搜索一样按标题/正文 ``icontains`` 匹配文章，另外附带命中的碎碎念、用户与分类法条目。``types`` 逗号分隔可只搜其中几类：post,memo,user,category,tag,series。",
+        "operationId": "blog_api_routers_discovery_search",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "types",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Types"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SearchOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "全站搜索",
+        "tags": [
+          "发现"
+        ]
+      }
+    },
+    "/api/v1/series": {
+      "get": {
+        "operationId": "blog_api_routers_taxonomy_list_series",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "系列列表",
+        "tags": [
+          "分类法"
+        ]
+      },
+      "post": {
+        "description": "长度等字段规则走 Web 的 ``SeriesForm``；同名系列复用已有条目。",
+        "operationId": "blog_api_routers_taxonomy_create_series",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "新建系列",
+        "tags": [
+          "分类法"
+        ]
+      }
+    },
+    "/api/v1/series/{series_id}": {
+      "get": {
+        "operationId": "blog_api_routers_taxonomy_series_detail",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeriesOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "系列详情",
+        "tags": [
+          "分类法"
+        ]
+      }
+    },
+    "/api/v1/series/{series_id}/posts": {
+      "get": {
+        "operationId": "blog_api_routers_taxonomy_series_posts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "系列内文章（按系列序号排序）",
+        "tags": [
+          "分类法"
+        ]
+      },
+      "post": {
+        "description": "与 Web 端 ``/ajax/series/<id>/manage/`` 相同：不改动文章的修改时间。",
+        "operationId": "blog_api_routers_taxonomy_add_post_to_series",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "series_id",
+            "required": true,
+            "schema": {
+              "title": "Series Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SeriesPostIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OkOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "把文章加入 / 移出系列",
+        "tags": [
+          "分类法"
+        ]
+      }
+    },
+    "/api/v1/tags": {
+      "get": {
+        "operationId": "blog_api_routers_taxonomy_list_tags",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "author",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Author"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "标签列表",
+        "tags": [
+          "分类法"
+        ]
+      },
+      "post": {
+        "description": "文章端点提交 ``tag_names`` 时会自动建标签，这里只是提前占位。",
+        "operationId": "blog_api_routers_taxonomy_create_tag",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NameIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagOut"
+                }
+              }
+            },
+            "description": "OK"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagOut"
+                }
+              }
+            },
+            "description": "Created"
+          }
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ],
+        "summary": "新建标签",
+        "tags": [
+          "分类法"
+        ]
+      }
+    },
+    "/api/v1/uploads/avatar": {
+      "post": {
+        "description": "与站内裁剪上传同一套处理：旧头像文件会被删除，新头像固定为 ``avatars/<用户名>.webp``。",
+        "operationId": "blog_api_routers_uploads_upload_avatar",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "image": {
+                    "description": "头像图片",
+                    "format": "binary",
+                    "title": "Image",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "image"
+                ],
+                "title": "FileParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvatarOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "更换头像",
+        "tags": [
+          "上传"
+        ]
+      }
+    },
+    "/api/v1/uploads/image": {
+      "post": {
+        "description": "返回可直接写进 Markdown 的 URL。相同内容（MD5 相同）不会重复入库，响应里的 ``dedup=true`` 表示复用了已有文件。上限 10MB，统一转成 WebP。",
+        "operationId": "blog_api_routers_uploads_upload_image",
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "image": {
+                    "description": "图片文件，字段名 image",
+                    "format": "binary",
+                    "title": "Image",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "image"
+                ],
+                "title": "FileParams",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "上传文章配图",
+        "tags": [
+          "上传"
+        ]
+      }
+    },
+    "/api/v1/uploads/images": {
+      "get": {
+        "operationId": "blog_api_routers_uploads_list_images",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "SessionOrBearerAuth": []
+          }
+        ],
+        "summary": "我上传过的图片",
+        "tags": [
+          "上传"
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "description": "排序：``joined``（默认，最新加入）/ ``username`` / ``posts``（按已发布文章数）。",
+        "operationId": "blog_api_routers_discovery_list_users",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "required": false,
+            "schema": {
+              "default": "joined",
+              "title": "Order",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "用户列表",
+        "tags": [
+          "发现"
+        ]
+      }
+    },
+    "/api/v1/users/{username}": {
+      "get": {
+        "description": "含 ``stats``：文章总数、已发布数、总浏览量、公开碎碎念数。",
+        "operationId": "blog_api_routers_discovery_get_user",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "required": true,
+            "schema": {
+              "title": "Username",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserPublicOut"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "OptionalBearerAuth": []
+          }
+        ],
+        "summary": "用户公开资料",
+        "tags": [
+          "发现"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "本地开发（runserver）",
+      "url": "http://127.0.0.1:8000"
+    },
+    {
+      "description": "线上站点",
+      "url": "https://blog.melichem.cn"
+    }
+  ]
+}

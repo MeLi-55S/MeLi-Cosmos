@@ -43,6 +43,15 @@ blog/                   # Django 应用
 ├── feeds.py            # RSS/Atom 订阅
 └── management/         # 自定义命令（seed_data, cleanup_view_logs 等）
 
+blog/api/               # REST API（django-ninja，挂载于 /api/v1/）
+├── app.py              # NinjaAPI 实例、异常处理器、router 挂载表
+├── auth.py             # Bearer 认证三档依赖
+├── common.py           # 分页 / 可见性 / 表单校验 / ref 解析
+├── errors.py           # 统一错误体
+├── schema.py           # 请求与响应模型
+├── serializers.py      # 模型 → dict
+└── routers/            # 按领域拆分的端点组（meta/posts/content/taxonomy/discovery/social/inbox/account/uploads）
+
 dashboard/              # 管理员面板（仅 staff 可访问）
 ├── views.py
 └── urls.py
@@ -85,6 +94,32 @@ templates/blog/         # Django 模板（Tailwind 样式）
 - **赞赏**弹窗，微信/支付宝二维码
 - **Select 下拉菜单**自定义 V 形图标 + 聚焦光环
 
+## REST API（`/api/v1`）
+
+基于 django-ninja，浏览器里可直接试用：**`/api/v1/docs`**（Swagger UI），机器可读规范：**`/api/v1/openapi.json`**，仓库快照：`docs/openapi.json`（改完端点跑 `manage.py export_openapi` 重生成，测试会检查快照与代码是否漂移）。
+
+**认证**：三级，全部以 `Authorization: Bearer mlc_<40 hex>` 携带个人访问令牌（PAT）。令牌只在签发时明文出现一次，库里存 SHA-256，撤销用 `revoked_at` 软标记。
+
+| 依赖 | 用于 | 行为 |
+|---|---|---|
+| 匿名 | `/health` `/meta` `/auth/login` `/auth/register` | 无需凭证 |
+| `OptionalBearerAuth` | 所有读端点、`POST /comments` | 不带令牌=公开视角；带作者令牌=额外看到自己的草稿与私密内容；游客评论也走这档 |
+| `BearerAuth` | 文章/碎碎念/分类法/点赞等写端点 | 必须有效令牌 |
+| `SessionOrBearerAuth` | `/auth/me` `/auth/tokens` `/account/*` `/inbox` `/uploads` | 令牌或浏览器会话皆可；走会话时补一次 CSRF 校验 |
+
+**端点分组**（49 个操作）：站点 2 · 文章 6 · 碎碎念 4 · 分类法 9 · 发现 5 · 评论与点赞 7 · 收件箱 3 · 认证与令牌 6 · 账号 4 · 上传 3。
+
+**统一错误体**：`{"error": {"code": "not_found", "message": "文章不存在"}}`，校验失败额外带 `details: {字段: [消息]}`，限流带 `Retry-After` 头。列表统一 `{count, page, page_size, total_pages, results}`，`page_size` 上限 100。
+
+**与站内同一套规则**：markdown 渲染、点赞文案、评论审核与限流、游客首评过审、蜜罐、图片转 WebP 与 MD5 去重、邀请码每日限额、浏览量冷却，全部复用 `blog/views.py` 里的实现，移动端不会比浏览器多出任何权限。
+
+```bash
+# 登录换令牌（注册需邀请码），之后所有写请求带 Authorization 头
+curl -s -X POST https://blog.example.com/api/v1/auth/login \
+     -H 'Content-Type: application/json' \
+     -d '{"username":"me","password":"…","device_name":"pixel"}'
+```
+
 ## 配置项
 
 | 环境变量 / 设置 | 默认值 | 说明 |
@@ -107,6 +142,7 @@ templates/blog/         # Django 模板（Tailwind 样式）
 uv run python manage.py seed_data              # 填充示例数据
 uv run python manage.py cleanup_view_logs       # 清理过期浏览日志
 uv run python manage.py test                    # 运行测试
+uv run python manage.py export_openapi         # 重生成 docs/openapi.json
 ```
 
 ## 许可

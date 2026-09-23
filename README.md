@@ -43,6 +43,15 @@ blog/                   # Django app
 ├── feeds.py            # RSS/Atom
 └── management/         # Custom commands (seed_data, cleanup_view_logs, etc.)
 
+blog/api/               # REST API (django-ninja, mounted at /api/v1/)
+├── app.py              # NinjaAPI instance, exception handler, router mount table
+├── auth.py             # the three Bearer auth tiers
+├── common.py           # pagination / visibility / form validation / ref resolution
+├── errors.py           # single error envelope
+├── schema.py           # request & response models
+├── serializers.py      # model → dict
+└── routers/            # endpoint groups by domain
+
 dashboard/              # Staff-only management dashboard
 ├── views.py
 └── urls.py
@@ -85,6 +94,18 @@ templates/blog/         # Django templates (Tailwind styled)
 - **Donation** popup with WeChat/Alipay QR codes
 - **Custom select** styling with themed chevron and focus ring
 
+## REST API (`/api/v1`)
+
+Built with django-ninja. Interactive docs at **`/api/v1/docs`** (Swagger UI), machine-readable schema at **`/api/v1/openapi.json`**, and a committed snapshot at `docs/openapi.json` (regenerate with `manage.py export_openapi`; a test fails if the snapshot drifts from the code).
+
+**Auth**: personal access tokens (`mlc_` + 40 hex) sent as `Authorization: Bearer …`. The plaintext appears once at issue time; only a SHA-256 hash is stored, and revocation is a soft `revoked_at` flag. Four tiers: anonymous (`/health`, `/meta`, login, register), `OptionalBearerAuth` (all reads plus guest comments — an author token also reveals that author's drafts and private items), `BearerAuth` (content writes), `SessionOrBearerAuth` (`/auth/me`, token management, `/account/*`, `/inbox`, `/uploads`; browser sessions additionally pass a CSRF check).
+
+**Coverage** (49 operations): site 2 · posts 6 · memos 4 · taxonomy 9 · discovery 5 · comments & likes 7 · inbox 3 · auth 6 · account 4 · uploads 3.
+
+**Errors** share one shape: `{"error": {"code": "not_found", "message": "…"}}`, plus `details: {field: [msg]}` on validation failures and a `Retry-After` header when throttled. Lists return `{count, page, page_size, total_pages, results}` with `page_size` capped at 100.
+
+**No second rulebook**: markdown rendering, like wording, comment moderation, rate limits, guest approval, honeypot, WebP conversion with MD5 dedup, the invite daily quota and the view-count cooldown all come from `blog/views.py`, so a mobile client can never be more privileged than the browser.
+
 ## Configuration
 
 | Env / Setting | Default | Description |
@@ -107,6 +128,7 @@ templates/blog/         # Django templates (Tailwind styled)
 uv run python manage.py seed_data              # Seed sample data
 uv run python manage.py cleanup_view_logs       # Purge old view log entries
 uv run python manage.py test                    # Run tests
+uv run python manage.py export_openapi         # Rewrite the docs/openapi.json snapshot
 ```
 
 ## License
