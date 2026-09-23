@@ -261,6 +261,30 @@ class SearchView(ListView):
 # Post Detail
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _get_series_nav(post):
+    """返回文章在其所属系列中的前后篇信息，无系列则为 None。
+
+    被 Web 模板（``post_detail.html``）与 API（``blog/api/serializers.py``）共用，
+    避免两处各写一份排序逻辑。返回的 prev/next 是 ``only()`` 的轻量 Post。
+    """
+    if not post.series:
+        return None
+    series_posts = list(Post.objects.filter(
+        series=post.series, status="published"
+    ).select_related("author").order_by("series_order", "created_time").only(
+        "id", "slug", "title", "series_order", "author__username"))
+    for i, sp in enumerate(series_posts):
+        if sp.pk == post.pk:
+            return {
+                "series": post.series,
+                "index": i + 1,
+                "total": len(series_posts),
+                "prev": series_posts[i - 1] if i > 0 else None,
+                "next": series_posts[i + 1] if i < len(series_posts) - 1 else None,
+            }
+    return None
+
+
 class PostDetailView(DetailView):
     model = Post
     template_name = "blog/post_detail.html"
@@ -302,21 +326,14 @@ class PostDetailView(DetailView):
         context["read_time"] = read_time
 
         # Series navigation
-        if post.series:
-            series_posts = list(Post.objects.filter(
-                series=post.series, status="published"
-            ).select_related("author").order_by("series_order", "created_time").only("id", "slug", "title", "series_order", "author__username"))
-            for i, sp in enumerate(series_posts):
-                if sp.pk == post.pk:
-                    if i > 0:
-                        context["series_prev"] = series_posts[i - 1]
-                    if i < len(series_posts) - 1:
-                        context["series_next"] = series_posts[i + 1]
-                    context["series_name"] = post.series.name
-                    context["series_slug"] = post.series.slug
-                    context["series_index"] = i + 1
-                    context["series_total"] = len(series_posts)
-                    break
+        nav = _get_series_nav(post)
+        if nav:
+            context["series_prev"] = nav["prev"]
+            context["series_next"] = nav["next"]
+            context["series_name"] = nav["series"].name
+            context["series_slug"] = nav["series"].slug
+            context["series_index"] = nav["index"]
+            context["series_total"] = nav["total"]
 
         # Related posts (scored)
         context["related_posts"] = _get_related_posts(post)

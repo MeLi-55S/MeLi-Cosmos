@@ -8,6 +8,7 @@ from django.contrib.sitemaps.views import sitemap
 from django.urls import path, include
 
 from blog.sitemaps import PostSitemap, StaticViewSitemap
+from blog.api.app import api as v1_api
 
 sitemaps = {
     "posts": PostSitemap,
@@ -16,6 +17,7 @@ sitemaps = {
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("api/v1/", v1_api.urls),
     path("dashboard/", include("dashboard.urls")),
     path("sitemap.xml", sitemap, {"sitemaps": sitemaps}, name="sitemap"),
     path("", include("blog.urls")),

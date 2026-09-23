@@ -1,6 +1,7 @@
 import uuid
 import os
 import hashlib
+import secrets
 
 from django.db import models
 from django.db.models.signals import post_save
@@ -422,6 +423,63 @@ class Notification(models.Model):
         if hasattr(obj, 'author'):
             return reverse('memo_detail', kwargs={'username': obj.author.username, 'pk': obj.pk})
         return None
+
+
+class ApiToken(models.Model):
+    """移动端 / 第三方客户端使用的个人访问令牌（PAT）。
+
+    只存 SHA-256 哈希，明文仅在创建时返回一次；撤销用 ``revoked_at`` 软标记。
+    认证入口见 ``blog/api/auth.py``，管理端点见 ``blog/api/routers/auth_tokens.py``。
+    """
+
+    TOKEN_PREFIX = "mlc_"
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="api_tokens", verbose_name="所属用户")
+    name = models.CharField("令牌名称", max_length=60)
+    token_hash = models.CharField("令牌哈希", max_length=64, unique=True, editable=False)
+    prefix = models.CharField("令牌前缀", max_length=16, editable=False)
+    last_used_at = models.DateTimeField("最后使用时间", null=True, blank=True)
+    revoked_at = models.DateTimeField("撤销时间", null=True, blank=True)
+    created_at = models.DateTimeField("创建时间", auto_now_add=True)
+
+    class Meta:
+        verbose_name = "API 令牌"
+        verbose_name_plural = verbose_name
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["token_hash"]),
+            models.Index(fields=["user", "revoked_at"]),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} 的令牌 {self.prefix}…"
+
+    @staticmethod
+    def hash_token(raw):
+        return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def issue(cls, user, name):
+        """Create a token and return ``(instance, plaintext)``. 明文只在这里出现一次。"""
+        raw = cls.TOKEN_PREFIX + secrets.token_hex(20)
+        obj = cls.objects.create(
+            user=user,
+            name=name.strip()[:60] or "未命名令牌",
+            token_hash=cls.hash_token(raw),
+            prefix=raw[:12],
+        )
+        return obj, raw
+
+    @property
+    def is_active(self):
+        return self.revoked_at is None
+
+    def touch(self):
+        """记录使用时间（距上次记录超过 60s 才写库，避免每请求一次 UPDATE）。"""
+        now = timezone.now()
+        if self.last_used_at is None or (now - self.last_used_at).total_seconds() > 60:
+            self.last_used_at = now
+            self.save(update_fields=["last_used_at"])
 
 
 @receiver(post_save, sender=User)
