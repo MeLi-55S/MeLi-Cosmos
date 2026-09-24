@@ -48,7 +48,7 @@ die()    { c_err "$*"; exit 1; }
 usage()  { awk 'NR>=3 && /^# 三条铁律/{exit} NR>=3{sub(/^# ?/,"");print}' "$0"; exit "${1:-0}"; }
 
 # ── 执行层 ────────────────────────────────────────────────────────────────
-ssh_ro() { ssh -o BatchMode=yes -o ConnectTimeout=10 "$SERVER" "$@"; }
+ssh_ro() { env -u LC_ALL ssh -o BatchMode=yes -o ConnectTimeout=10 "$SERVER" "$@"; }
 
 # run_remote <说明> <远端脚本> [KEY=VAL ...]
 #   返回 0 = 已执行且成功；2 = dry-run 跳过；1 = 失败
@@ -69,7 +69,7 @@ run_remote() {
     preamble+="${kv%%=*}=$(printf '%q' "${kv#*=}")"$'\n'
   done
   printf '%s%s' "$preamble" "$script" \
-    | ssh -o BatchMode=yes -o ConnectTimeout=20 "$SERVER" "bash -s"
+    | env -u LC_ALL ssh -o BatchMode=yes -o ConnectTimeout=20 "$SERVER" "bash -s"
 }
 
 # 待部署提交：必须已经存在于 origin 的某个分支上，否则远端 git pull 拿不到
@@ -93,6 +93,8 @@ ninja_version() {
 }
 
 # ── status / check：只读 ──────────────────────────────────────────────────
+# 远端 bash 启动时会因转发过去的 LC_ALL=zh_CN.UTF-8（服务器没生成该 locale）刷
+# `setlocale` 警告，把 status 的输出弄脏；用 env -u 在客户端就不转发它。
 # 只读片段同样写成字符串（heredoc）：内联在双引号 ssh 里的话，一个没转义的双引号就会
 # 把整段撕开，而这类损坏本机看不出来（bash -n 只检查剩下的部分）。写成字符串后
 # selftest 能在上云之前把它 bash -n 一遍。
@@ -162,7 +164,7 @@ ssh_script() {
     preamble+="${kv%%=*}=$(printf '%q' "${kv#*=}")"$'\n'
   done
   printf '%s%s' "$preamble" "$script" \
-    | ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER" "bash -s"
+    | env -u LC_ALL ssh -o BatchMode=yes -o ConnectTimeout=15 "$SERVER" "bash -s"
 }
 
 cmd_status() {
@@ -273,7 +275,7 @@ cmd_backup() {
   printf '  云端备份落在 %s\n' "$dest"
   c_info "镜像到本机 $LOCAL_BACKUP_ROOT/$TS（备份只放一台机器等于没有备份）"
   mkdir -p "$LOCAL_BACKUP_ROOT/$TS"
-  scp -q -o BatchMode=yes "$SERVER:$dest/*" "$LOCAL_BACKUP_ROOT/$TS/"
+  env -u LC_ALL scp -q -o BatchMode=yes "$SERVER:$dest/*" "$LOCAL_BACKUP_ROOT/$TS/"
   ( cd "$LOCAL_BACKUP_ROOT/$TS" && sha256sum -c SHA256SUMS ) || die "本机镜像与云端校验不一致"
   # 清单里有 10 项，scp 少传一个文件也会让 -c 通过（它只校验清单里有的）
   local want got
