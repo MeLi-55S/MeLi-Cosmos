@@ -42,6 +42,8 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "blog.middleware.BanCheckMiddleware",
+    # 放最后：它只在响应阶段改形状（/api/ 下的 HTML 404、405 → JSON），见 blog/api/errors.py
+    "blog.api.errors.ApiUrlErrorShapeMiddleware",
 ]
 
 ROOT_URLCONF = "my_cosmos.urls"
@@ -101,7 +103,9 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "media/"
-MEDIA_ROOT = BASE_DIR / "media"
+# 与 DB_NAME 同样的理由留出环境变量入口：端到端验收脚本把上传的图片写到自己的
+# 临时目录里，不在仓库的 media/ 下留孤儿文件。默认值不变。
+MEDIA_ROOT = Path(os.environ.get("MEDIA_ROOT", BASE_DIR / "media"))
 
 # =============================================================================
 # Default Primary Key Field

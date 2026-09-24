@@ -136,6 +136,55 @@ class MetaApiTests(ApiTestCase):
             self.assertEqual(set(committed["paths"][path]), set(item),
                              f"{path} 的方法集合变了")
 
+class ApiUrlSpaceTests(ApiTestCase):
+    """``/api/`` 的 URL 空间也必须给 JSON。
+
+    移动端按 ``error.code`` 分支；拼错路径（Django 解析失败的 404）与方法不对
+    （ninja ``PathView`` 的 405）都是"正常返回的 HTML 响应"，不走异常处理器。
+    见 ``blog.api.errors.ApiUrlErrorShapeMiddleware``。
+    """
+
+    def _assert_json_error(self, response, code, status):
+        self.assertEqual(response.status_code, status)
+        body = self.json(response)
+        self.assertEqual(body["error"]["code"], code)
+        return body
+
+    def test_unknown_path_returns_json_404(self):
+        body = self._assert_json_error(self.client.get("/api/v1/nope"), "not_found", 404)
+        self.assertIn("/api/v1/nope", body["error"]["message"])
+
+    def test_unknown_nested_path_returns_json_404(self):
+        self._assert_json_error(
+            self.client.get("/api/v1/posts/x/likes/nope"), "not_found", 404)
+
+    def test_wrong_method_returns_json_405(self):
+        response = self.client.delete("/api/v1/health")
+        body = self._assert_json_error(response, "method_not_allowed", 405)
+        self.assertIn("DELETE", body["error"]["message"])
+        self.assertIn("GET", response.headers["Allow"])
+
+    def test_business_404_still_uses_same_shape(self):
+        """真路由里抛的业务 404 早就带 JSON 契约，中间件不该重复处理。"""
+        body = self._assert_json_error(
+            self.client.get("/api/v1/posts/no-such-article"), "not_found", 404)
+        self.assertEqual(body["error"]["message"], "文章不存在")
+
+    def test_catch_all_does_not_swallow_real_routes(self):
+        self.assertEqual(self.client.get("/api/v1/health").status_code, 200)
+        self.assertEqual(self.client.get("/api/v1/docs").status_code, 200)
+        self.assertEqual(
+            self.client.get(f"/api/v1/posts/{self.published.unique_id}").status_code, 200)
+        self.assertEqual(
+            self.client.get("/api/v1/posts/%s" % self.published.slug).status_code, 200)
+
+    def test_site_404_page_untouched(self):
+        """站内（非 API）的 404 仍然是页面，没有被中间件改成 JSON。"""
+        response = self.client.get("/no-such-page/")
+        self.assertEqual(response.status_code, 404)
+        self.assertNotIn("application/json", response.headers["Content-Type"])
+
+
 class TokenAuthTests(ApiTestCase):
     def test_token_plain_text_only_at_issue(self):
         self.assertTrue(self.alice_raw.startswith("mlc_"))

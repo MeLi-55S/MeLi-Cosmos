@@ -9,6 +9,11 @@
 
 ``blog.views.ContentActionError`` 是 Web 与 API 共用的"写操作失败"异常，在这里
 一并翻译：各 router 直接调用 views 里的那份实现即可，不必逐处 try/except。
+
+连"路径拼错、方法用错"也走同一形状：``ApiUrlErrorShapeMiddleware`` 挂在
+``MIDDLEWARE`` 末尾，把 ``/api/`` 下 URL 解析阶段产生的 HTML 404 / 405 换成本文件的
+JSON 契约。这类响应不经过 ninja 的 exception handler——它们是正常返回的响应，
+不是抛出的异常。
 """
 
 import logging
@@ -106,3 +111,43 @@ def error_body_handler(request, exc):
     if retry_after:
         response["Retry-After"] = str(int(retry_after))
     return response
+
+
+class ApiUrlErrorShapeMiddleware:
+    """把 ``/api/`` 下"没落到业务代码里"的 404 / 405 也换成统一 JSON。
+
+    ninja 的 exception handler 只处理视图内部抛出的异常，而这两类响应是正常返回
+    的对象：拼错路径 → Django 解析失败的 HTML 404 页；方法不对 → ``PathView`` 的
+    ``HttpResponseNotAllowed``。移动端只认 ``error.code``，拿到 HTML 就必须整段读
+    body 才能分支，所以在这里补齐契约。已经是 JSON 的一律放行（业务 404 就走这条）。
+    """
+
+    #: 只有 API 前缀下的响应会被改写；站内页面维持 HTML 404 页不变
+    prefix = "/api/"
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if not request.path.startswith(self.prefix):
+            return response
+        if response.status_code not in (404, 405):
+            return response
+        if response.headers.get("Content-Type", "").startswith("application/json"):
+            return response
+
+        allow = response.headers.get("Allow", "")
+        if response.status_code == 405:
+            code = "method_not_allowed"
+            message = f"{request.method} 不被 {request.path} 支持"
+            if allow:
+                message += f"（可用：{allow}）"
+        else:
+            code, message = "not_found", f"端点不存在：{request.method} {request.path}"
+
+        new = JsonResponse({"error": {"code": code, "message": message}},
+                           status=response.status_code)
+        if allow:
+            new["Allow"] = allow
+        return new
