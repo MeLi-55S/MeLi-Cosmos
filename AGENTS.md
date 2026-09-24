@@ -6,8 +6,9 @@
 uv sync                                                  # install deps
 uv run python manage.py runserver                        # dev → 127.0.0.1:8000
 uv run python manage.py migrate                          # apply migrations
-uv run python manage.py test                             # 232 tests (104 web + 128 API)
+uv run python manage.py test                             # 238 tests (104 web + 134 API)
 uv run python manage.py test blog.tests_api              # API 层测试单独跑
+./scripts/e2e_api_acceptance.sh                          # 真 HTTP 端到端验收（143 项，只跑 /tmp 数据库副本）
 uv run python manage.py export_openapi                   # 重新生成 docs/openapi.json 快照
 uv run python manage.py seed_data                        # admin user debris/admin
 uv run python manage.py collectstatic --noinput           # static files
@@ -51,6 +52,9 @@ Env loaded from `.env` via `python-dotenv` (see `.env.example`). Project config:
 - Tests mock DiceBear avatar download (`blog_models.generate_default_avatar = _mock_generate`) to avoid network calls
 - `start.sh` auto-copies `.env.example` → `.env` if missing, runs collectstatic + migrate, then starts gunicorn (prod) or runserver (dev)
 - Production nginx uses `proxy_protocol`; `X-Forwarded-For` derived from `$proxy_protocol_addr` (nginx.conf.reference)
+- API URL-space errors (typo'd path → 404, wrong method → 405) never reach ninja's exception handler; `blog.api.errors.ApiUrlErrorShapeMiddleware` (last in `MIDDLEWARE`) rewrites them into the same JSON envelope. Non-`/api/` 404 pages stay HTML on purpose.
+- No `CACHES` in settings → LocMemCache per process, so login/comment/API rate limits effectively multiply by the gunicorn worker count.
+- `scripts/e2e_api_acceptance.sh` runs 143 real-HTTP assertions against a throwaway `/tmp` copy of `db.sqlite3` on port 8011 (`REPO`/`TMP`/`PORT` overridable); it never touches the repo DB or the cloud. Report: `docs/api-deploy-acceptance.md`
 - `management/commands/`: `seed_data`, `cleanup_view_logs`, `cleanup_expired_invites`, `export_openapi`
 - `main.py` at repo root is a no-op placeholder — not the entry point
 
