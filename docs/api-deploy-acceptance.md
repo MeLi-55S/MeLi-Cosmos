@@ -89,9 +89,30 @@ django-ninja 版的 `/api/v1` 已经在本机做到"能直接给移动端联调"
 | 登录 | `POST /auth/login` **只发 PAT、不下发会话 Cookie**；浏览器会话走 Web 表单那条路，且写操作要带 CSRF 头 |
 | 可见性 | 匿名只见已发布 / `is_public` 内容；带本人令牌可读自己的草稿与私密项 |
 
-## 上云流程（等明确同意后才执行）
+## 上云流程
 
-云端事实（本轮 `status` 只读所见）：`aliserver:/home/admin/blog`，`main @ 8863bd1` 工作树干净，`blog.service active`，gunicorn 监听 `127.0.0.1:9999`，磁盘可用 9.6G、内存可用约 57–71 MiB，venv 有 `ensurepip` 但没有 `pip`/`uv`，`django-ninja` 未安装。
+云端事实（`status` 只读所见）：`aliserver:/home/admin/blog`，gunicorn 监听 `127.0.0.1:9999`，磁盘可用 9.6G、内存可用约 57–71 MiB，venv 有 `ensurepip` 但没有 `pip`/`uv`。
+
+### 2026-09-24 首次真实部署：中断并自动回滚（已修）
+
+`deploy --yes` 在"装完依赖后的探测"这一关失败，按铁律回滚：代码退回 `8863bd1` 并重启，`migrate` 与 `collectstatic` 都没执行，数据库一个字节没变，站点仍在旧版本上服务。**`django-ninja 1.7.1` 其实装成功了**——失败的是探测写法本身。
+
+根因：脚本用 `"$REMOTE_PY" -c "import ninja"` 判断装没装，而 django-ninja 在导入期就读自己的配置（`ninja/conf.py` 顶层 `Settings.model_validate(django_settings)`）。`python -c` 里没有 `DJANGO_SETTINGS_MODULE`，于是 pydantic 抛 9 个 `ValidationError`，退出码非 0，被翻译成"装完仍然 import ninja 失败"。这是个**假阴性**：包在与不在都失败，本机从没暴露，是因为本机一直用 `manage.py test` 验证，从没单独跑那条探测；`selftest` 的影子部署里 python 是桩，也演不出"真实环境里探测方式不对"。
+
+修法（三条都在 `sync-aliserver.sh`）：
+
+1. 探测改成查已发行版本的元数据，不执行包代码——`importlib.metadata.version("django-ninja")`，`status` / `check` / `deploy` 三处共用同一个 `NINJA_PROBE`；装完后拿它比对 `uv.lock` 里的期望版本。
+2. 真正的导入把关换成 `"$REMOTE_PY" manage.py check`，放在 `migrate` 与 `restart` **之前**：它有配置上下文，既验 ninja 也验本项目 `blog.api` 导得动，坏代码因此根本没机会去掀服务。
+3. `selftest` 补两个场景（"依赖已在环境里"不再重复安装、"`manage.py check` 失败中途回滚"）与三条字符串守卫：任何一处重新出现裸 `import ninja`、或漏发 `NINJA_PROBE`，自检立刻红。
+
+顺带的现象，看 `status` 时要知道：修好之前 `django-ninja:` 那一列会一直显示"未安装"，即使已经装上——同一个坏探测。
+
+回滚还留下第二个坑：部署记账文件 `.deploy-state` 被写在仓库目录里、未被版本控制，于是"云端工作树干净"这条保护从此永久失败——**第一次部署自己的记录会挡住第二次部署**。已改成 `git status --porcelain -- . ':(exclude).deploy-state'`（`S_STATUS` 与 `cmd_deploy` 两处同规则，`.gitignore` 里也补了该文件名），记账文件另起一行如实显示但不参与干净与否；selftest 加了守卫，两处排除规则被改回去就红。
+
+两处修好后对着真云端只读复核的结果：`云端工作树干净` + `部署记账 .deploy-state：1 条` + `django-ninja: 1.7.1` + `venv 内有 pip`（上次 ensurepip 自举出来的）+ `待部署提交可用`。
+
+
+### 命令序列
 
 ```bash
 git checkout main && git merge --ff-only feature/api-ninja   # 部署目标必须在 origin/main 这条线上
@@ -102,7 +123,7 @@ git checkout main && git merge --ff-only feature/api-ninja   # 部署目标必�
 ./sync-aliserver.sh rollback --yes                           # 需要时；健康检查失败会自动触发同样的回退
 ```
 
-`deploy` 会做的三件不可忽略的事：用 `python -m ensurepip` 自举 pip 后装 `django-ninja==1.7.1`（版本取自 `uv.lock`）；执行 `migrate --noinput`，按端到端验收的结果只新增 `blog_apitoken` 一张表；`systemctl restart blog`。已有备份：远端 `~/backups/20260923T165502` 与本机 `~/blog-backups/20260923T165502`（含 db、media、`.env`、systemd unit、依赖清单，带 SHA256SUMS）。
+`deploy` 依次做：双备份（远端 + 本机，sha256 校验）→ `git merge --ff-only` → 依赖有变才 `python -m ensurepip` 自举 pip 并装 `django-ninja==1.7.1`（版本取自 `uv.lock`）→ **`manage.py check`（导入把关，跑在 migrate/restart 之前）** → `migrate --noinput`（按端到端验收的结果只新增 `blog_apitoken` 一张表）→ `collectstatic` → `systemctl restart blog` → 打 `/api/v1/health` 等公网体检。任一步失败都会把代码退回部署前的提交并重启，同时在 `.deploy-state` 记一行 `aborted` / `rolled_back`。已有备份：远端 `~/backups/20260923T165502` 与本机 `~/blog-backups/20260923T165502`（含 db、media、`.env`、systemd unit、依赖清单，带 SHA256SUMS），首次真实部署那次也在动代码之前另落了一份（时间戳见远端 `~/backups/` 与本机 `~/blog-backups/`）。
 
 ## 遗留风险（不阻塞，但上线前该知道）
 

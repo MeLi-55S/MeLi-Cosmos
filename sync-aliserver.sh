@@ -92,6 +92,19 @@ ninja_version() {
   printf '%s' "$v"
 }
 
+# django-ninja 装没装，不能用裸 `import ninja` 来判断：ninja 包在导入期就会去读自己的
+# 配置（ninja/conf.py 顶层就有 Settings.model_validate(django_settings)），而 `python -c`
+# 里没有 DJANGO_SETTINGS_MODULE，这一步无论包在不在都会抛 pydantic ValidationError。
+# 2026-09-24 首次真实部署正是被这个假阴性判成"装完仍然 import ninja 失败"而回滚的。
+# 问已发行版本的元数据才可靠（它不执行包代码）；真正的导入把关交给 manage.py check，
+# 那里有配置上下文，也顺带验到本项目的 blog.api。
+NINJA_PROBE='import sys
+try:
+    import importlib.metadata as m
+    sys.stdout.write(m.version("django-ninja"))
+except Exception:
+    sys.exit(1)'
+
 # ── status / check：只读 ──────────────────────────────────────────────────
 # 远端 bash 启动时会因转发过去的 LC_ALL=zh_CN.UTF-8（服务器没生成该 locale）刷
 # `setlocale` 警告，把 status 的输出弄脏；用 env -u 在客户端就不转发它。
@@ -102,11 +115,15 @@ S_STATUS="$(cat <<'REMOTE_S_STATUS'
 set -uo pipefail
 cd "$REMOTE_DIR" || { echo "  ✘ 打不开 $REMOTE_DIR"; exit 1; }
 echo "  分支 $(git rev-parse --abbrev-ref HEAD)   HEAD $(git rev-parse --short HEAD)  $(git log -1 --format=%s)"
-D=$(git status --porcelain)
+# .deploy-state 是本流水线每次部署自己写的记账文件，永远是 untracked。2026-09-24 首次
+# 真实部署回滚后它就留在仓库目录里，把"工作树干净"这条保护变成了永久失败——不排掉的话，
+# 第二次部署会被第一次部署自己的记录挡住。它照样单独显示一行，只是不参与干净与否。
+D=$(git status --porcelain -- . ':(exclude).deploy-state')
 if [ -n "$D" ]; then echo '  ! 云端工作树不干净（部署会在这里被拒绝）'; printf '%s\n' "$D" | head -10 | sed 's/^/    /'
 else echo '  云端工作树干净'; fi
+if [ -f .deploy-state ]; then printf '  部署记账 .deploy-state：%s 条（untracked 属预期，不计入上面的判断）\n' "$(wc -l < .deploy-state)"; fi
 S=$(sudo -n systemctl is-active blog 2>/dev/null || true)
-N=$("$REMOTE_PY" -c 'import ninja; print(ninja.__version__)' 2>/dev/null || echo '未安装')
+N="$("$REMOTE_PY" -c "$NINJA_PROBE" 2>/dev/null || true)"
 echo "  服务 blog: ${S:-未知}   django-ninja: $N"
 echo "  磁盘可用 $(df -hP /home | awk 'NR==2{print $4}')   内存可用 $(free -m | awk 'NR==2{print $7}') MiB"
 echo "  后端首页 → $(curl -s -o /dev/null -w '%{http_code}' --max-time 8 "$HEALTH_BASE/" || echo 无响应)"
@@ -143,7 +160,8 @@ else
   elif "$REMOTE_PY" -c 'import ensurepip' >/dev/null 2>&1; then ok "venv 内无 pip，但有 ensurepip → 部署时先 bootstrap"
   else bad "既没有 uv，也没有 pip/ensurepip → 装不了 django-ninja"; fi
 fi
-"$REMOTE_PY" -c 'import ninja' 2>/dev/null && info "django-ninja 已在环境里" || info "django-ninja 待安装（版本取自 uv.lock）"
+NV="$("$REMOTE_PY" -c "$NINJA_PROBE" 2>/dev/null || true)"
+[ -n "$NV" ] && info "django-ninja $NV 已在环境里" || info "django-ninja 待安装（版本取自 uv.lock）"
 
 [ -f db.sqlite3 ] && info "数据库 $(du -h db.sqlite3 | awk '{print $1}')（部署前会在线备份并双份留存）"
 [ -d media ] && info "media $(du -sh media | awk '{print $1}')（部署前打包备份）"
@@ -185,6 +203,7 @@ cmd_status() {
   c_info "云端 $SERVER:$REMOTE_DIR"
   ssh_script "$S_STATUS" REMOTE_DIR="$REMOTE_DIR" REMOTE_PY="$REMOTE_PY" \
     HEALTH_BASE="$HEALTH_BASE" STATE_FILE="$STATE_FILE" BRANCH="$BRANCH" \
+    NINJA_PROBE="$NINJA_PROBE" \
     || die "ssh 到 $SERVER 失败"
 }
 
@@ -199,7 +218,7 @@ cmd_check() {
 
   c_info "云端预检（只读）"
   ssh_script "$S_CHECK" REMOTE_DIR="$REMOTE_DIR" REMOTE_PY="$REMOTE_PY" \
-    HEALTH_BASE="$HEALTH_BASE" || die "云端预检未通过（或未连上 $SERVER）"
+    HEALTH_BASE="$HEALTH_BASE" NINJA_PROBE="$NINJA_PROBE" || die "云端预检未通过（或未连上 $SERVER）"
 
   if target="$(resolve_target 2>/dev/null)"; then
     c_ok "待部署提交可用：${target:0:8}"
@@ -344,7 +363,7 @@ log "代码 ${PREV:0:7} → $(git rev-parse --short HEAD)"
 
 # 依赖：ninja 缺失、或依赖清单变了才动
 NEED=0
-"$REMOTE_PY" -c "import ninja" 2>/dev/null || NEED=1
+[ -n "$("$REMOTE_PY" -c "$NINJA_PROBE" 2>/dev/null || true)" ] || NEED=1
 git diff --name-only "$PREV" HEAD | grep -qE "^(pyproject\.toml|uv\.lock)$" && NEED=1
 if [ "$NEED" = 1 ]; then
   if command -v uv >/dev/null 2>&1; then
@@ -353,11 +372,21 @@ if [ "$NEED" = 1 ]; then
     log "pip install django-ninja==$NINJA_VER（venv 里没有 pip 就先 ensurepip）"
     "$REMOTE_PY" -m pip --version >/dev/null 2>&1 || "$REMOTE_PY" -m ensurepip --upgrade >/dev/null 2>&1
     "$REMOTE_PY" -m pip install -q --upgrade "django-ninja==$NINJA_VER" || fail "pip 安装失败"
-    "$REMOTE_PY" -c "import ninja" || fail "装完仍然 import ninja 失败"
+    INST="$("$REMOTE_PY" -c "$NINJA_PROBE" 2>/dev/null || true)"
+    [ "$INST" = "$NINJA_VER" ] || fail "装完读到的 django-ninja 版本是 '${INST:-没有}'，期望 $NINJA_VER"
   fi
 else
   log "依赖无需变动"
 fi
+
+# 导入把关放在有配置上下文的地方做：manage.py 会设好 DJANGO_SETTINGS_MODULE，这一句
+# 同时覆盖"ninja 装得对不对"和"新代码 import 得动吗"，比裸 import 有意义得多，
+# 而且它跑在 migrate 与 restart 之前——坏代码不该有机会把服务掀了。
+if ! CHK="$("$REMOTE_PY" manage.py check 2>&1)"; then
+  printf '%s\n' "$CHK" | tail -12 | sed 's/^/      /'
+  fail "manage.py check 未通过：新代码在当前环境里导入/配置不通"
+fi
+log "manage.py check 通过（$(printf '%s\n' "$CHK" | tail -1)）"
 
 log "migrate --noinput（只增表/字段，不改老数据）"
 "$REMOTE_PY" manage.py migrate --noinput 2>&1 | tail -8 || fail "migrate 失败"
@@ -439,11 +468,13 @@ cmd_deploy() {
   fi
   [ "$rc" -eq 0 ] || die "备份失败，取消部署"
 
-  dirty="$(ssh_ro "cd $REMOTE_DIR && test -z \"\$(git status --porcelain)\" && echo clean || echo dirty")"
+  # 与 S_STATUS 用同一套排除规则，否则第一次部署留下的记账文件会让第二次部署被自己的保护拒掉
+  dirty="$(ssh_ro "cd $REMOTE_DIR && test -z \"\$(git status --porcelain -- . ':(exclude).deploy-state')\" && echo clean || echo dirty")"
   run_remote "部署 ${target:0:8}" "$S_DEPLOY" \
     REMOTE_DIR="$REMOTE_DIR" REMOTE_PY="$REMOTE_PY" BRANCH="$BRANCH" TARGET="$target" \
     CLOUD_DIRTY="$dirty" NINJA_VER="$(ninja_version)" STATE_FILE="$STATE_FILE" \
-    HEALTH_BASE="$HEALTH_BASE" || die "部署失败（详见上面的远端日志）"
+    HEALTH_BASE="$HEALTH_BASE" NINJA_PROBE="$NINJA_PROBE" \
+    || die "部署失败（详见上面的远端日志）"
 
   c_info "从本机验证公网链路"
   curl -s -o /dev/null -w "  $PUBLIC_URL/ → %{http_code}\n" --max-time 20 "$PUBLIC_URL/" || c_warn "公网首页无响应"
@@ -604,17 +635,31 @@ exit 0
 STUB
   cat > "$bin/python-stub" <<'STUB'
 #!/bin/sh
-case "$1" in
-  -c) exit 0 ;;                      # import ninja 探测
-  -V) echo "Python 3.14 (stub)"; exit 0 ;;
-  -m) exit 0 ;;                      # pip / ensurepip
+# 只按命令行里出现的关键词决定反应，才能把真环境里的坑演出来：
+#   -c 里的元数据探测 → 打印 $STUB_NINJA_VER（空 = 没装）
+#   manage.py check   → $CHECK_FAIL=1 时模拟"导入/配置不通"
+# 裸 `import ninja` 在这里根本没有分支：脚本要是哪天又用探测它来判断成败，
+# selftest 的 grep 保护会先一步红掉。
+case "$*" in
+  *importlib.metadata*) printf '%s' "${STUB_NINJA_VER:-}"; exit 0 ;;
 esac
 if [ "$1" = "manage.py" ]; then
   case "$2" in
+    check)
+      if [ "${CHECK_FAIL:-}" = 1 ]; then
+        echo "django.core.exceptions.ImproperlyConfigured: 桩里演一次导入失败" >&2
+        exit 1
+      fi
+      echo "System check identified no issues (0 silenced)." ;;
     migrate)       echo "  Applying blog.0016_apitoken... OK" ;;
     collectstatic) echo "1 static file copied" ;;
   esac
+  exit 0
 fi
+case "$1" in
+  -V) echo "Python 3.14 (stub)"; exit 0 ;;
+  -m) exit 0 ;;                      # pip / ensurepip
+esac
 exit 0
 STUB
   chmod +x "$bin"/*
@@ -641,9 +686,12 @@ STUB
     rm -f "$repo/.deploy-state"
     # 每个场景都从"云端停在 pre"起步（上一个场景可能已经把仓库推进到了 target）
     git -C "$repo" reset -q --hard "$pre"
-    payload="$(printf 'REMOTE_DIR=%q\nREMOTE_PY=%q\nBRANCH=main\nTARGET=%q\nCLOUD_DIRTY=clean\nNINJA_VER=0\nSTATE_FILE=%q\nHEALTH_BASE=http://127.0.0.1:9\n' \
-      "$repo" "$bin/python-stub" "$target" "$repo/.deploy-state")"
-    out="$(STUB_REPO="$repo" BAD_SHA="$bad" SUDO_FAIL="${SUDO_FAIL:-}" PATH="$bin:$PATH" \
+    # NINJA_PROBE 同样要下发：漏了它，远端 set -u 会当场以"未定义变量"退出，
+    # 而这类"少传一个变量"的错误在真服务器上表现为部署失败，本机就该先炸出来。
+    payload="$(printf 'REMOTE_DIR=%q\nREMOTE_PY=%q\nBRANCH=main\nTARGET=%q\nCLOUD_DIRTY=clean\nNINJA_VER=0\nNINJA_PROBE=%q\nSTATE_FILE=%q\nHEALTH_BASE=http://127.0.0.1:9\n' \
+      "$repo" "$bin/python-stub" "$target" "$NINJA_PROBE" "$repo/.deploy-state")"
+    out="$(STUB_REPO="$repo" BAD_SHA="$bad" SUDO_FAIL="${SUDO_FAIL:-}" \
+      STUB_NINJA_VER="${NVER:-0}" CHECK_FAIL="${CHKFAIL:-}" PATH="$bin:$PATH" \
       bash -s <<<"$payload
 $S_DEPLOY")" || rc=$?
     printf '%s\n' "$out" | sed 's/^/  /'
@@ -662,6 +710,11 @@ $S_DEPLOY")" || rc=$?
   SUDO_FAIL="" deploy_run "体检失败自动回滚" rolled_back "$pre" "$target"
   # 3) 连重启都没成功：中途退出也要退回 pre
   SUDO_FAIL="1" deploy_run "重启失败中途回滚" aborted "$pre" ""
+  # 4) 依赖已装好（元数据探测有版本）：不该重复安装，也不该被"裸 import"那类假阴性拦住
+  NVER="0" SUDO_FAIL="" deploy_run "依赖已在环境里" ok "$target" ""
+  # 5) 导入把关失败：必须在 migrate 与 restart 之前中断，并把代码退回 pre
+  CHKFAIL="1" SUDO_FAIL="" deploy_run "manage.py check 失败中途回滚" aborted "$pre" ""
+  NVER="0"; CHKFAIL=""; SUDO_FAIL=""
 
   # 4) 回滚：站在 target 上，让 .deploy-state 里既有真实变更也有 aborted 原地记录，
   #    验证 rollback 退回的是"上一次真的动过代码"的那个提交，而不是多退一步
@@ -677,7 +730,7 @@ $S_DEPLOY")" || rc=$?
   [ "$at" = "$pre" ] || die "影子回滚：停在 ${at:0:7}，应回到 ${pre:0:7}（aborted 记录把目标多退了一步）"
   printf '%s\n' "$out" | grep -q '^ROLLBACK_RESULT ok$' || die "影子回滚：结果不是 ok"
 
-  c_ok "影子部署三种结局 + 回滚目标选择都符合预期"
+  c_ok "影子部署五种走向（正常 / 体检失败 / 重启失败 / 依赖已在 / 导入把关失败）+ 回滚目标选择都符合预期"
 }
 
 # selftest：完全不碰云端，只验证三段远端脚本没被引号/here-doc 吃掉。
@@ -698,6 +751,17 @@ cmd_selftest() {
   grep -qF 'BACKUP_PATH' <<<"$S_BACKUP" || die "S_BACKUP 缺少回传备份路径"
   grep -qF 'ROLLBACK_RESULT' <<<"$S_ROLLBACK" || die "S_ROLLBACK 缺少结果标记"
   grep -qF 'is-active blog' <<<"$S_STATUS" || die "S_STATUS 缺少服务状态探测"
+  # 探测方式回归：裸 import ninja 在没有 Django 配置时必然失败（真实踩过一次，见 NINJA_PROBE 注释）
+  grep -qF 'importlib.metadata' <<<"$NINJA_PROBE" || die "NINJA_PROBE 不再是查版本元数据"
+  for name in S_STATUS S_CHECK S_DEPLOY; do
+    grep -qE 'import ninja' <<<"${!name}" && die "$name 还在用裸 import ninja 判断装没装（假阴性来源）"
+  done
+  grep -qF 'manage.py check' <<<"$S_DEPLOY" || die "S_DEPLOY 缺少 manage.py check 这道导入把关"
+  grep -qF "':(exclude).deploy-state'" <<<"$S_STATUS" || die "S_STATUS 的工作树判断没排除记账文件"
+  grep -qF "':(exclude).deploy-state'" <<<"$(declare -f cmd_deploy)" \
+    || die "cmd_deploy 的脏检查没排除记账文件（第一次部署的回滚记录会挡住第二次部署）"
+  grep -qF 'NINJA_PROBE=%q' <(printf '%s' "$(declare -f cmd_rehearse_deploy)") \
+    || die "影子部署的 payload 没下发 NINJA_PROBE"
   grep -qF 'BAD=$((BAD + 1))' <<<"$S_CHECK" || die "S_CHECK 不再统计阻塞项"
   cmd_rehearse
   cmd_rehearse_deploy

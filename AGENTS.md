@@ -28,8 +28,13 @@ opens an ssh connection on the write paths. Every deploy first lands a mirrored 
 (remote `$HOME/backups/<ts>` + local `~/blog-backups/<ts>`, sha256-verified both sides; the
 sqlite file is copied through the online-backup API because WAL-mode `cp` can grab half-written
 pages). The server venv has neither uv nor pip, so the deploy step bootstraps pip via
-`ensurepip` and installs `django-ninja` pinned to `uv.lock`'s version. `deploy.sh` is only a
-shim that forwards here; `start.sh` is unrelated (it runs the service on the machine itself).
+`ensurepip` and installs `django-ninja` pinned to `uv.lock`'s version. Whether ninja is
+present is probed with `importlib.metadata.version("django-ninja")`, **never** with a bare
+`python -c "import ninja"` — ninja reads its own settings at import time, so that probe fails
+whether or not the package is installed (it aborted the first real deploy on 2026-09-24). The
+real gate is `manage.py check`, run after install and *before* migrate/restart. `deploy.sh` is
+only a shim that forwards here; `start.sh` is unrelated (it runs the service on the machine
+itself).
 
 Env loaded from `.env` via `python-dotenv` (see `.env.example`). Project config: `my_cosmos/settings.py`.
 

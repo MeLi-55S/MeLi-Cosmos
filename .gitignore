@@ -22,4 +22,6 @@ explanations/
 ARCHITECTURE.md
 tailwindcss-cli
 deploy.sh
+# sync-aliserver.sh 每次部署在云端写的记账文件（本机一般没有，写上以防误提交）
+.deploy-state
 tools/
